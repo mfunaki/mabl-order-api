@@ -46,7 +46,7 @@ app.post('/login', (req, res) => {
 app.post('/api/reset', (req, res) => {
   orders = [];
   nextId = 1;
-  res.json({ status: 200, message: 'Database reset' });
+  res.json({ code: 200, message: 'Database reset' });
 });
 
 // POST /api/seed - 初期データ作成（認証不要）
