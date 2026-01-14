@@ -66,3 +66,13 @@ jobs:
         run: |
           SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)')
           echo "Service URL: $SERVICE_URL"
+
+      - name: Functional test deployment
+        id: mabl-test-deployment
+        uses: mablhq/github-run-tests-action@v1
+        env:
+          MABL_API_KEY: ${{ secrets.MABL_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          application-id: YxuRaG4ZbCF2Y6CdOVMDNw-a
+          environment-id: LGQw0U8fQwqn9Dsz5CibdA-e
