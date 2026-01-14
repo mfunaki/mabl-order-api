@@ -17,7 +17,7 @@ app.use(express.json());
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: '認証が必要です' });
+    return res.status(401).json({ code: 401, message: '認証が必要です' });
   }
 
   const token = authHeader.split(' ')[1];
@@ -26,7 +26,7 @@ const authMiddleware = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    return res.status(401).json({ message: '無効なトークンです' });
+    return res.status(401).json({ code: 401, message: '無効なトークンです' });
   }
 };
 
@@ -36,10 +36,10 @@ app.post('/login', (req, res) => {
 
   if (username === 'demo' && password === 'password') {
     const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: '1h' });
-    return res.json({ token });
+    return res.json({ code: 200, token });
   }
 
-  return res.status(401).json({ message: '認証に失敗しました' });
+  return res.status(401).json({ code: 401, message: '認証に失敗しました' });
 });
 
 // POST /api/reset - データリセット（認証不要）
@@ -60,7 +60,7 @@ app.post('/api/seed', (req, res) => {
     createdAt: new Date().toISOString()
   };
   orders.push(order);
-  res.json(order);
+  res.json({ code: 200, order });
 });
 
 // 認証が必要なルート
@@ -76,46 +76,46 @@ app.post('/api/orders', (req, res) => {
     createdAt: new Date().toISOString()
   };
   orders.push(order);
-  res.json(order);
+  res.json({ code: 200, order });
 });
 
 // GET /api/orders/:id - 注文取得
 app.get('/api/orders/:id', (req, res) => {
   const order = orders.find(o => o.id === req.params.id);
   if (!order) {
-    return res.status(404).json({ message: '注文が見つかりません' });
+    return res.status(404).json({ code: 404, message: '注文が見つかりません' });
   }
-  res.json(order);
+  res.json({ code: 200, order });
 });
 
 // POST /api/orders/:id/pay - 支払い
 app.post('/api/orders/:id/pay', (req, res) => {
   const order = orders.find(o => o.id === req.params.id);
   if (!order) {
-    return res.status(404).json({ message: '注文が見つかりません' });
+    return res.status(404).json({ code: 404, message: '注文が見つかりません' });
   }
 
   if (order.status !== 'created') {
-    return res.status(400).json({ message: '支払いは完了しています' });
+    return res.status(400).json({ code: 400, message: '支払いは完了しています' });
   }
 
   order.status = 'paid';
-  res.json(order);
+  res.json({ code: 200, order });
 });
 
 // POST /api/orders/:id/ship - 発送
 app.post('/api/orders/:id/ship', (req, res) => {
   const order = orders.find(o => o.id === req.params.id);
   if (!order) {
-    return res.status(404).json({ message: '注文が見つかりません' });
+    return res.status(404).json({ code: 404, message: '注文が見つかりません' });
   }
 
   if (order.status === 'created') {
-    return res.status(400).json({ message: '支払いが完了していないため発送できません' });
+    return res.status(400).json({ code: 400, message: '支払いが完了していないため発送できません' });
   }
 
   order.status = 'shipped';
-  res.json(order);
+  res.json({ code: 200, order });
 });
 
 // サーバー起動（テスト時は起動しない）

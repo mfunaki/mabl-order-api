@@ -16,6 +16,7 @@ describe('mabl-order-api', () => {
         .send({ username: 'demo', password: 'password' });
 
       expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('code', 200);
       expect(res.body).toHaveProperty('token');
     });
 
@@ -25,6 +26,7 @@ describe('mabl-order-api', () => {
         .send({ username: 'demo', password: 'wrong' });
 
       expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('code', 401);
     });
   });
 
@@ -42,8 +44,10 @@ describe('mabl-order-api', () => {
       const res = await request(app).post('/api/seed');
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('id', '1');
-      expect(res.body).toHaveProperty('status', 'created');
+      expect(res.body).toHaveProperty('code', 200);
+      expect(res.body).toHaveProperty('order');
+      expect(res.body.order).toHaveProperty('id', '1');
+      expect(res.body.order).toHaveProperty('status', 'created');
     });
   });
 
@@ -62,6 +66,7 @@ describe('mabl-order-api', () => {
           .send({ item: 'テスト商品' });
 
         expect(res.status).toBe(401);
+        expect(res.body).toHaveProperty('code', 401);
       });
 
       it('新規注文を作成できる', async () => {
@@ -71,10 +76,12 @@ describe('mabl-order-api', () => {
           .send({ item: 'テスト商品' });
 
         expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('id');
-        expect(res.body).toHaveProperty('item', 'テスト商品');
-        expect(res.body).toHaveProperty('status', 'created');
-        expect(res.body).toHaveProperty('createdAt');
+        expect(res.body).toHaveProperty('code', 200);
+        expect(res.body).toHaveProperty('order');
+        expect(res.body.order).toHaveProperty('id');
+        expect(res.body.order).toHaveProperty('item', 'テスト商品');
+        expect(res.body.order).toHaveProperty('status', 'created');
+        expect(res.body.order).toHaveProperty('createdAt');
       });
     });
 
@@ -86,14 +93,16 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`)
           .send({ item: 'テスト商品' });
 
-        const orderId = createRes.body.id;
+        const orderId = createRes.body.order.id;
 
         const res = await request(app)
           .get(`/api/orders/${orderId}`)
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('id', orderId);
+        expect(res.body).toHaveProperty('code', 200);
+        expect(res.body).toHaveProperty('order');
+        expect(res.body.order).toHaveProperty('id', orderId);
       });
 
       it('存在しない注文で404を返す', async () => {
@@ -102,6 +111,7 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(404);
+        expect(res.body).toHaveProperty('code', 404);
       });
     });
 
@@ -112,14 +122,16 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`)
           .send({ item: 'テスト商品' });
 
-        const orderId = createRes.body.id;
+        const orderId = createRes.body.order.id;
 
         const res = await request(app)
           .post(`/api/orders/${orderId}/pay`)
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('status', 'paid');
+        expect(res.body).toHaveProperty('code', 200);
+        expect(res.body).toHaveProperty('order');
+        expect(res.body.order).toHaveProperty('status', 'paid');
       });
 
       it('既にpaid状態の注文で400を返す', async () => {
@@ -128,7 +140,7 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`)
           .send({ item: 'テスト商品' });
 
-        const orderId = createRes.body.id;
+        const orderId = createRes.body.order.id;
 
         // 1回目の支払い
         await request(app)
@@ -141,6 +153,7 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('code', 400);
         expect(res.body.message).toContain('支払いは完了しています');
       });
 
@@ -150,7 +163,7 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`)
           .send({ item: 'テスト商品' });
 
-        const orderId = createRes.body.id;
+        const orderId = createRes.body.order.id;
 
         // 支払い
         await request(app)
@@ -168,6 +181,7 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('code', 400);
         expect(res.body.message).toContain('支払いは完了しています');
       });
     });
@@ -179,7 +193,7 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`)
           .send({ item: 'テスト商品' });
 
-        const orderId = createRes.body.id;
+        const orderId = createRes.body.order.id;
 
         // 支払い
         await request(app)
@@ -192,7 +206,9 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('status', 'shipped');
+        expect(res.body).toHaveProperty('code', 200);
+        expect(res.body).toHaveProperty('order');
+        expect(res.body.order).toHaveProperty('status', 'shipped');
       });
 
       it('created状態（未払い）の注文で400を返す', async () => {
@@ -201,13 +217,14 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`)
           .send({ item: 'テスト商品' });
 
-        const orderId = createRes.body.id;
+        const orderId = createRes.body.order.id;
 
         const res = await request(app)
           .post(`/api/orders/${orderId}/ship`)
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('code', 400);
         expect(res.body.message).toContain('支払いが完了していないため発送できません');
       });
     });
