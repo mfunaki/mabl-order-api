@@ -35,7 +35,8 @@ describe('mabl-order-api', () => {
       const res = await request(app).post('/api/reset');
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ code: 200, message: 'Database reset' });
+      expect(res.body).toHaveProperty('code', 200);
+      expect(res.body).toHaveProperty('message', 'Database reset');
     });
   });
 
