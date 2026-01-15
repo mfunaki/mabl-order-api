@@ -1,0 +1,101 @@
+# mabl-order-api
+
+A REST API server for order management, created for demonstrating mabl's automated testing capabilities.
+It intentionally includes state transitions and errors, making it suitable for demonstrating mabl's API testing features.
+
+## How to Start
+
+```bash
+npm install
+node server.js
+```
+
+The server starts at `http://localhost:3000`.
+
+## Endpoints
+
+### Authentication
+
+#### POST /login
+Log in to obtain a JWT token.
+
+```bash
+curl -X POST http://localhost:3000/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "demo", "password": "password"}'
+```
+
+Response example:
+```json
+{"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+```
+
+### Utilities (No Authentication Required)
+
+#### POST /api/reset
+Deletes all data to reset the environment.
+
+```bash
+curl -X POST http://localhost:3000/api/reset
+```
+
+#### POST /api/seed
+Creates initial demo data (ID: 1, status: created).
+
+```bash
+curl -X POST http://localhost:3000/api/seed
+```
+
+### Order Management (Authentication Required)
+
+The following endpoints require the `Authorization: Bearer <token>` header.
+
+#### POST /api/orders
+Creates a new order (Initial status: `created`).
+
+```bash
+curl -X POST http://localhost:3000/api/orders \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"item": "Item Name"}'
+```
+
+#### GET /api/orders/:id
+Retrieves order information for the specified ID.
+
+```bash
+curl http://localhost:3000/api/orders/1 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+#### POST /api/orders/:id/pay
+Updates the order status to paid (`paid`).
+
+- Success Condition: Current status is `created`.
+- Error: Returns a 400 error if already `paid` or `shipped`.
+
+```bash
+curl -X POST http://localhost:3000/api/orders/1/pay \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+#### POST /api/orders/:id/ship
+Updates the order status to shipped (`shipped`).
+
+- Success Condition: Current status is `paid`.
+- Error: Returns a 400 error if `created` (unpaid).
+
+```bash
+curl -X POST http://localhost:3000/api/orders/1/ship \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+## State Transitions
+
+```
+created --> paid --> shipped
+```
+
+- `created`: Immediately after order creation
+- `paid`: Payment completed
+- `shipped`: Shipped
