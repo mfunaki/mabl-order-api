@@ -1,13 +1,13 @@
 {
   "info": {
     "name": "mabl-order-api",
-    "description": "mablの自動テストデモ用REST APIサーバー",
+    "description": "mablの自動テストデモ用REST APIサーバー / REST API server for mabl automated testing demo",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000",
+      "value": "https://mabl-order-api-ixi7x7b23a-an.a.run.app",
       "type": "string"
     },
     {
@@ -23,25 +23,25 @@
   ],
   "item": [
     {
-      "name": "認証",
+      "name": "認証 / Authentication",
       "item": [
         {
-          "name": "正しい認証情報でトークンを返す",
+          "name": "正しい認証情報でトークンを返す / Returns token with valid credentials",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが200', function () {",
+                  "pm.test('ステータスコードが200 / Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('codeが200', function () {",
+                  "pm.test('codeが200 / code is 200', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(200);",
                   "});",
                   "",
-                  "pm.test('tokenが返される', function () {",
+                  "pm.test('tokenが返される / token is returned', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData).to.have.property('token');",
                   "    pm.collectionVariables.set('token', jsonData.token);",
@@ -71,17 +71,17 @@
           }
         },
         {
-          "name": "間違った認証情報で401を返す",
+          "name": "間違った認証情報で401を返す / Returns 401 with invalid credentials",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが401', function () {",
+                  "pm.test('ステータスコードが401 / Status code is 401', function () {",
                   "    pm.response.to.have.status(401);",
                   "});",
                   "",
-                  "pm.test('codeが401', function () {",
+                  "pm.test('codeが401 / code is 401', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(401);",
                   "});"
@@ -112,25 +112,25 @@
       ]
     },
     {
-      "name": "ユーティリティ",
+      "name": "ユーティリティ / Utilities",
       "item": [
         {
-          "name": "認証なしでデータをリセットできる",
+          "name": "認証なしでデータをリセットできる / Can reset data without authentication",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが200', function () {",
+                  "pm.test('ステータスコードが200 / Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('codeが200', function () {",
+                  "pm.test('codeが200 / code is 200', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(200);",
                   "});",
                   "",
-                  "pm.test('メッセージがDatabase reset', function () {",
+                  "pm.test('メッセージがDatabase reset / Message is Database reset', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.message).to.eql('Database reset');",
                   "});"
@@ -150,32 +150,32 @@
           }
         },
         {
-          "name": "認証なしで初期データを作成できる",
+          "name": "認証なしで初期データを作成できる / Can create seed data without authentication",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが200', function () {",
+                  "pm.test('ステータスコードが200 / Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('codeが200', function () {",
+                  "pm.test('codeが200 / code is 200', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(200);",
                   "});",
                   "",
-                  "pm.test('orderが返される', function () {",
+                  "pm.test('orderが返される / order is returned', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData).to.have.property('order');",
                   "});",
                   "",
-                  "pm.test('order.idが1', function () {",
+                  "pm.test('order.idが1 / order.id is 1', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.id).to.eql('1');",
                   "});",
                   "",
-                  "pm.test('order.statusがcreated', function () {",
+                  "pm.test('order.statusがcreated / order.status is created', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.status).to.eql('created');",
                   "});"
@@ -197,20 +197,20 @@
       ]
     },
     {
-      "name": "注文作成",
+      "name": "注文作成 / Create Order",
       "item": [
         {
-          "name": "認証なしで401を返す",
+          "name": "認証なしで401を返す / Returns 401 without authentication",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが401', function () {",
+                  "pm.test('ステータスコードが401 / Status code is 401', function () {",
                   "    pm.response.to.have.status(401);",
                   "});",
                   "",
-                  "pm.test('codeが401', function () {",
+                  "pm.test('codeが401 / code is 401', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(401);",
                   "});"
@@ -239,43 +239,43 @@
           }
         },
         {
-          "name": "新規注文を作成できる",
+          "name": "新規注文を作成できる / Can create a new order",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが200', function () {",
+                  "pm.test('ステータスコードが200 / Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('codeが200', function () {",
+                  "pm.test('codeが200 / code is 200', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(200);",
                   "});",
                   "",
-                  "pm.test('orderが返される', function () {",
+                  "pm.test('orderが返される / order is returned', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData).to.have.property('order');",
                   "});",
                   "",
-                  "pm.test('order.idが存在する', function () {",
+                  "pm.test('order.idが存在する / order.id exists', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order).to.have.property('id');",
                   "    pm.collectionVariables.set('orderId', jsonData.order.id);",
                   "});",
                   "",
-                  "pm.test('order.itemがテスト商品', function () {",
+                  "pm.test('order.itemがテスト商品 / order.item is test product', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.item).to.eql('テスト商品');",
                   "});",
                   "",
-                  "pm.test('order.statusがcreated', function () {",
+                  "pm.test('order.statusがcreated / order.status is created', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.status).to.eql('created');",
                   "});",
                   "",
-                  "pm.test('order.createdAtが存在する', function () {",
+                  "pm.test('order.createdAtが存在する / order.createdAt exists', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order).to.have.property('createdAt');",
                   "});"
@@ -310,30 +310,30 @@
       ]
     },
     {
-      "name": "注文取得",
+      "name": "注文取得 / Get Order",
       "item": [
         {
-          "name": "存在する注文を取得できる",
+          "name": "存在する注文を取得できる / Can retrieve an existing order",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが200', function () {",
+                  "pm.test('ステータスコードが200 / Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('codeが200', function () {",
+                  "pm.test('codeが200 / code is 200', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(200);",
                   "});",
                   "",
-                  "pm.test('orderが返される', function () {",
+                  "pm.test('orderが返される / order is returned', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData).to.have.property('order');",
                   "});",
                   "",
-                  "pm.test('order.idが一致する', function () {",
+                  "pm.test('order.idが一致する / order.id matches', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.id).to.eql(pm.collectionVariables.get('orderId'));",
                   "});"
@@ -358,17 +358,17 @@
           }
         },
         {
-          "name": "存在しない注文で404を返す",
+          "name": "存在しない注文で404を返す / Returns 404 for non-existent order",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが404', function () {",
+                  "pm.test('ステータスコードが404 / Status code is 404', function () {",
                   "    pm.response.to.have.status(404);",
                   "});",
                   "",
-                  "pm.test('codeが404', function () {",
+                  "pm.test('codeが404 / code is 404', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(404);",
                   "});"
@@ -395,30 +395,30 @@
       ]
     },
     {
-      "name": "支払い処理",
+      "name": "支払い処理 / Payment Processing",
       "item": [
         {
-          "name": "created状態の注文を支払い済みにできる",
+          "name": "created状態の注文を支払い済みにできる / Can mark created order as paid",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが200', function () {",
+                  "pm.test('ステータスコードが200 / Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('codeが200', function () {",
+                  "pm.test('codeが200 / code is 200', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(200);",
                   "});",
                   "",
-                  "pm.test('orderが返される', function () {",
+                  "pm.test('orderが返される / order is returned', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData).to.have.property('order');",
                   "});",
                   "",
-                  "pm.test('order.statusがpaid', function () {",
+                  "pm.test('order.statusがpaid / order.status is paid', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.status).to.eql('paid');",
                   "});"
@@ -443,22 +443,22 @@
           }
         },
         {
-          "name": "既にpaid状態の注文で400を返す",
+          "name": "既にpaid状態の注文で400を返す / Returns 400 for already paid order",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが400', function () {",
+                  "pm.test('ステータスコードが400 / Status code is 400', function () {",
                   "    pm.response.to.have.status(400);",
                   "});",
                   "",
-                  "pm.test('codeが400', function () {",
+                  "pm.test('codeが400 / code is 400', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(400);",
                   "});",
                   "",
-                  "pm.test('エラーメッセージに「支払いは完了しています」を含む', function () {",
+                  "pm.test('エラーメッセージに「支払いは完了しています」を含む / Error message contains payment already completed', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.message).to.include('支払いは完了しています');",
                   "});"
@@ -485,30 +485,30 @@
       ]
     },
     {
-      "name": "発送処理",
+      "name": "発送処理 / Shipping Processing",
       "item": [
         {
-          "name": "paid状態の注文を発送済みにできる",
+          "name": "paid状態の注文を発送済みにできる / Can mark paid order as shipped",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが200', function () {",
+                  "pm.test('ステータスコードが200 / Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('codeが200', function () {",
+                  "pm.test('codeが200 / code is 200', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(200);",
                   "});",
                   "",
-                  "pm.test('orderが返される', function () {",
+                  "pm.test('orderが返される / order is returned', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData).to.have.property('order');",
                   "});",
                   "",
-                  "pm.test('order.statusがshipped', function () {",
+                  "pm.test('order.statusがshipped / order.status is shipped', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.status).to.eql('shipped');",
                   "});"
@@ -533,14 +533,14 @@
           }
         },
         {
-          "name": "created状態（未払い）の注文で400を返す",
+          "name": "created状態（未払い）の注文で400を返す / Returns 400 for unpaid (created) order",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "// このテストの前に新しい注文を作成する必要があります",
-                  "// Collection Runnerで実行する場合は、先にリセット→ログイン→注文作成を実行してください"
+                  "// このテストの前に新しい注文を作成する必要があります / A new order must be created before this test",
+                  "// Collection Runnerで実行する場合は、先にリセット→ログイン→注文作成を実行してください / When using Collection Runner, execute reset -> login -> create order first"
                 ],
                 "type": "text/javascript"
               }
@@ -549,16 +549,16 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ステータスコードが400', function () {",
+                  "pm.test('ステータスコードが400 / Status code is 400', function () {",
                   "    pm.response.to.have.status(400);",
                   "});",
                   "",
-                  "pm.test('codeが400', function () {",
+                  "pm.test('codeが400 / code is 400', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.code).to.eql(400);",
                   "});",
                   "",
-                  "pm.test('エラーメッセージに「支払いが完了していないため発送できません」を含む', function () {",
+                  "pm.test('エラーメッセージに「支払いが完了していないため発送できません」を含む / Error message contains cannot ship without payment', function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.message).to.include('支払いが完了していないため発送できません');",
                   "});"
@@ -585,16 +585,16 @@
       ]
     },
     {
-      "name": "フロー: 正常系（注文→支払い→発送）",
+      "name": "フロー: 正常系（注文→支払い→発送） / Flow: Happy Path (Order -> Pay -> Ship)",
       "item": [
         {
-          "name": "1. データリセット",
+          "name": "1. データリセット / 1. Data Reset",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('リセット成功', function () {",
+                  "pm.test('リセット成功 / Reset successful', function () {",
                   "    pm.response.to.have.status(200);",
                   "});"
                 ],
@@ -613,13 +613,13 @@
           }
         },
         {
-          "name": "2. ログイン",
+          "name": "2. ログイン / 2. Login",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('ログイン成功', function () {",
+                  "pm.test('ログイン成功 / Login successful', function () {",
                   "    pm.response.to.have.status(200);",
                   "    var jsonData = pm.response.json();",
                   "    pm.collectionVariables.set('token', jsonData.token);",
@@ -649,13 +649,13 @@
           }
         },
         {
-          "name": "3. 注文作成",
+          "name": "3. 注文作成 / 3. Create Order",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('注文作成成功', function () {",
+                  "pm.test('注文作成成功 / Order creation successful', function () {",
                   "    pm.response.to.have.status(200);",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.status).to.eql('created');",
@@ -690,13 +690,13 @@
           }
         },
         {
-          "name": "4. 支払い",
+          "name": "4. 支払い / 4. Payment",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('支払い成功', function () {",
+                  "pm.test('支払い成功 / Payment successful', function () {",
                   "    pm.response.to.have.status(200);",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.status).to.eql('paid');",
@@ -722,13 +722,13 @@
           }
         },
         {
-          "name": "5. 発送",
+          "name": "5. 発送 / 5. Shipping",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('発送成功', function () {",
+                  "pm.test('発送成功 / Shipping successful', function () {",
                   "    pm.response.to.have.status(200);",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.status).to.eql('shipped');",
