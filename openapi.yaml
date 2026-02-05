@@ -25,7 +25,7 @@ components:
         item:
           type: string
           description: Name of the item
-          example: "Item Name"
+          example: "Sample Item"
         status:
           type: string
           description: Current status of the order
@@ -38,7 +38,24 @@ components:
           type: string
           format: date-time
           description: Timestamp when the order was created
-    Error:
+    OrderResponse:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Database reset"
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token for authenticated requests
+    ErrorResponse:
       type: object
       properties:
         message:
@@ -71,13 +88,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-                    description: JWT token for authenticated requests
+                $ref: '#/components/schemas/TokenResponse'
         '401':
           description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/reset:
     post:
       summary: Reset database
@@ -88,11 +105,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Database reset"
+                $ref: '#/components/schemas/MessageResponse'
   /api/seed:
     post:
       summary: Seed database
@@ -103,7 +116,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
   /api/orders:
     post:
       summary: Create a new order
@@ -122,14 +135,18 @@ paths:
                   type: string
                   example: "New Item"
       responses:
-        '201':
+        '200':
           description: Order created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}:
     get:
       summary: Get order details
@@ -148,11 +165,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}/pay:
     post:
       summary: Process payment for an order
@@ -172,17 +197,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
         '400':
           description: Invalid state transition (e.g., already paid)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}/ship:
     post:
       summary: Ship an order
@@ -202,14 +235,22 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
         '400':
           description: Invalid state transition (e.g., not paid yet)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

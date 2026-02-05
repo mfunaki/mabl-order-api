@@ -40,7 +40,28 @@ components:
           type: string
           format: date-time
           description: 注文が作成された日時
-    Error:
+    OrderResponse:
+      type: object
+      description: 注文情報を含むレスポンス
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+    MessageResponse:
+      type: object
+      description: メッセージを含むレスポンス
+      properties:
+        message:
+          type: string
+          description: メッセージ
+          example: "Database reset"
+    TokenResponse:
+      type: object
+      description: トークンを含むレスポンス
+      properties:
+        token:
+          type: string
+          description: 認証済みリクエストに使用するJWTトークン
+    ErrorResponse:
       type: object
       description: エラーレスポンス
       properties:
@@ -84,13 +105,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-                    description: 認証済みリクエストに使用するJWTトークン
+                $ref: '#/components/schemas/TokenResponse'
         '401':
           description: 認証失敗（ユーザー名またはパスワードが不正）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/reset:
     post:
       summary: データベースリセット
@@ -106,11 +127,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Database reset"
+                $ref: '#/components/schemas/MessageResponse'
   /api/seed:
     post:
       summary: デモデータ作成
@@ -130,7 +147,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
   /api/orders:
     post:
       summary: 注文作成
@@ -154,14 +171,18 @@ paths:
                   description: 商品名
                   example: "新しい商品"
       responses:
-        '201':
+        '200':
           description: 注文作成成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
         '401':
           description: 認証エラー（トークンが無効または未提供）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}:
     get:
       summary: 注文詳細取得
@@ -184,11 +205,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
         '401':
           description: 認証エラー（トークンが無効または未提供）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: 注文が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}/pay:
     post:
       summary: 支払い処理
@@ -218,17 +247,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
         '400':
           description: 不正なステータス遷移（例：既に支払い済み）
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: 認証エラー（トークンが無効または未提供）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: 注文が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}/ship:
     post:
       summary: 発送処理
@@ -258,14 +295,22 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderResponse'
         '400':
           description: 不正なステータス遷移（例：未支払い）
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: 認証エラー（トークンが無効または未提供）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: 注文が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

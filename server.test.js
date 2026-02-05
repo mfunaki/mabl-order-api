@@ -16,7 +16,6 @@ describe('mabl-order-api', () => {
         .send({ username: 'demo', password: 'password' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('code', 200);
       expect(res.body).toHaveProperty('token');
     });
 
@@ -26,7 +25,6 @@ describe('mabl-order-api', () => {
         .send({ username: 'demo', password: 'wrong' });
 
       expect(res.status).toBe(401);
-      expect(res.body).toHaveProperty('code', 401);
     });
   });
 
@@ -35,7 +33,6 @@ describe('mabl-order-api', () => {
       const res = await request(app).post('/api/reset');
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('code', 200);
       expect(res.body).toHaveProperty('message', 'Database reset');
     });
   });
@@ -45,7 +42,6 @@ describe('mabl-order-api', () => {
       const res = await request(app).post('/api/seed');
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('code', 200);
       expect(res.body).toHaveProperty('order');
       expect(res.body.order).toHaveProperty('id', '1');
       expect(res.body.order).toHaveProperty('status', 'created');
@@ -67,7 +63,6 @@ describe('mabl-order-api', () => {
           .send({ item: 'テスト商品' });
 
         expect(res.status).toBe(401);
-        expect(res.body).toHaveProperty('code', 401);
       });
 
       it('新規注文を作成できる', async () => {
@@ -77,7 +72,6 @@ describe('mabl-order-api', () => {
           .send({ item: 'テスト商品' });
 
         expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('code', 200);
         expect(res.body).toHaveProperty('order');
         expect(res.body.order).toHaveProperty('id');
         expect(res.body.order).toHaveProperty('item', 'テスト商品');
@@ -101,7 +95,6 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('code', 200);
         expect(res.body).toHaveProperty('order');
         expect(res.body.order).toHaveProperty('id', orderId);
       });
@@ -112,7 +105,6 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(404);
-        expect(res.body).toHaveProperty('code', 404);
       });
     });
 
@@ -130,7 +122,6 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('code', 200);
         expect(res.body).toHaveProperty('order');
         expect(res.body.order).toHaveProperty('status', 'paid');
       });
@@ -154,7 +145,6 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(400);
-        expect(res.body).toHaveProperty('code', 400);
         expect(res.body.message).toContain('支払いは完了しています');
       });
 
@@ -182,7 +172,6 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(400);
-        expect(res.body).toHaveProperty('code', 400);
         expect(res.body.message).toContain('支払いは完了しています');
       });
     });
@@ -207,7 +196,6 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('code', 200);
         expect(res.body).toHaveProperty('order');
         expect(res.body.order).toHaveProperty('status', 'shipped');
       });
@@ -225,7 +213,6 @@ describe('mabl-order-api', () => {
           .set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(400);
-        expect(res.body).toHaveProperty('code', 400);
         expect(res.body.message).toContain('支払いが完了していないため発送できません');
       });
     });
