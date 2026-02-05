@@ -2,70 +2,55 @@ openapi: 3.0.0
 info:
   title: mabl-order-api
   description: |
-    A REST API server for order management, created for demonstrating mabl's automated testing capabilities.
-    It intentionally includes state transitions and errors.
+    A REST API server for order management, created for demonstrating mabl's API testing capabilities.
+
+    ## State Transitions
+
+    Orders transition through the following states:
+
+    ```
+    created --> paid --> shipped
+    ```
+
+    | Status | Description |
+    |--------|-------------|
+    | created | Immediately after order creation (unpaid) |
+    | paid | Payment completed |
+    | shipped | Shipped |
+
+    ## Authentication
+
+    Endpoints under `/api/orders` require JWT authentication.
+    Obtain a token via `POST /login` and authenticate using the `Authorization: Bearer <token>` header.
   version: 1.0.0
+  contact:
+    name: mabl-order-api
+
 servers:
   - url: http://localhost:3000
     description: Local Development Server
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-  schemas:
-    Order:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the order
-          example: "1"
-        item:
-          type: string
-          description: Name of the item
-          example: "Sample Item"
-        status:
-          type: string
-          description: Current status of the order
-          enum:
-            - created
-            - paid
-            - shipped
-          example: "created"
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp when the order was created
-    OrderResponse:
-      type: object
-      properties:
-        order:
-          $ref: '#/components/schemas/Order'
-    MessageResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: "Database reset"
-    TokenResponse:
-      type: object
-      properties:
-        token:
-          type: string
-          description: JWT token for authenticated requests
-    ErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: "Error description"
+
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: Data Management
+    description: Demo environment setup (no authentication required)
+  - name: Order Management
+    description: Create, retrieve, and update order status (authentication required)
+
 paths:
   /login:
     post:
-      summary: Authenticate and get JWT token
-      description: Use username 'demo' and password 'password'.
+      tags:
+        - Authentication
+      summary: Login
+      description: |
+        Authenticate with username and password to obtain a JWT token.
+
+        **Credentials:**
+        - Username: `demo`
+        - Password: `password`
+      operationId: login
       requestBody:
         required: true
         content:
@@ -78,10 +63,10 @@ paths:
               properties:
                 username:
                   type: string
-                  example: "demo"
+                  example: demo
                 password:
                   type: string
-                  example: "password"
+                  example: password
       responses:
         '200':
           description: Authentication successful
@@ -95,31 +80,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Authentication failed
+
   /api/reset:
     post:
-      summary: Reset database
-      description: Deletes all orders from memory. No authentication required.
+      tags:
+        - Data Management
+      summary: Reset Data
+      description: |
+        Delete all order data from memory and reset.
+
+        **No authentication required** - For demo environment setup
+      operationId: resetData
       responses:
         '200':
-          description: Database reset successfully
+          description: Reset successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Database reset
+
   /api/seed:
     post:
-      summary: Seed database
-      description: Resets data and creates a demo order (ID 1, status created). No authentication required.
+      tags:
+        - Data Management
+      summary: Create Initial Data
+      description: |
+        Create demo initial data (ID: 1, status: created).
+        Existing data will be reset.
+
+        **No authentication required** - For demo environment setup
+      operationId: seedData
       responses:
         '200':
-          description: Seed successful
+          description: Initial data created successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
+              example:
+                order:
+                  id: '1'
+                  item: Sample Item
+                  status: created
+                  createdAt: '2024-01-01T00:00:00.000Z'
+
   /api/orders:
     post:
-      summary: Create a new order
+      tags:
+        - Order Management
+      summary: Create Order
+      description: |
+        Create a new order. Initial status is `created`.
+      operationId: createOrder
       security:
         - bearerAuth: []
       requestBody:
@@ -133,7 +149,8 @@ paths:
               properties:
                 item:
                   type: string
-                  example: "New Item"
+                  description: Item name
+                  example: Test Item
       responses:
         '200':
           description: Order created successfully
@@ -142,32 +159,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
         '401':
-          description: Unauthorized
+          description: Authentication error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                noAuth:
+                  summary: No authentication header
+                  value:
+                    message: Authentication required
+                invalidToken:
+                  summary: Invalid token
+                  value:
+                    message: Invalid token
+
   /api/orders/{id}:
     get:
-      summary: Get order details
+      tags:
+        - Order Management
+      summary: Get Order
+      description: |
+        Retrieve order information for the specified ID.
+      operationId: getOrder
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
+        - name: id
+          in: path
           required: true
           description: Order ID
+          schema:
+            type: string
       responses:
         '200':
-          description: Order details
+          description: Order retrieved successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
         '401':
-          description: Unauthorized
+          description: Authentication error
           content:
             application/json:
               schema:
@@ -178,19 +210,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Order not found
+
   /api/orders/{id}/pay:
     post:
-      summary: Process payment for an order
-      description: Transitions status from 'created' to 'paid'.
+      tags:
+        - Order Management
+      summary: Process Payment
+      description: |
+        Update order status to `paid`.
+
+        **Success condition:**
+        - Current status must be `created`
+
+        **Error conditions:**
+        - Returns 400 error if already `paid` or `shipped`
+      operationId: payOrder
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
+        - name: id
+          in: path
           required: true
           description: Order ID
+          schema:
+            type: string
       responses:
         '200':
           description: Payment successful
@@ -199,13 +244,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
         '400':
-          description: Invalid state transition (e.g., already paid)
+          description: Already paid
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Payment has already been completed
         '401':
-          description: Unauthorized
+          description: Authentication error
           content:
             application/json:
               schema:
@@ -216,34 +263,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Order not found
+
   /api/orders/{id}/ship:
     post:
-      summary: Ship an order
-      description: Transitions status from 'paid' to 'shipped'.
+      tags:
+        - Order Management
+      summary: Process Shipment
+      description: |
+        Update order status to `shipped`.
+
+        **Success condition:**
+        - Current status must be `paid`
+
+        **Error conditions:**
+        - Returns 400 error if status is `created` (unpaid)
+      operationId: shipOrder
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: string
+        - name: id
+          in: path
           required: true
           description: Order ID
+          schema:
+            type: string
       responses:
         '200':
-          description: Shipping successful
+          description: Shipment successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
         '400':
-          description: Invalid state transition (e.g., not paid yet)
+          description: Cannot ship - unpaid
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Cannot ship because payment has not been completed
         '401':
-          description: Unauthorized
+          description: Authentication error
           content:
             application/json:
               schema:
@@ -254,3 +316,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Order not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from POST /login
+
+  schemas:
+    Order:
+      type: object
+      description: Order object
+      properties:
+        id:
+          type: string
+          description: Order ID
+          example: '1'
+        item:
+          type: string
+          description: Item name
+          example: Test Item
+        status:
+          type: string
+          description: Order status
+          enum:
+            - created
+            - paid
+            - shipped
+          example: created
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp (ISO 8601 format)
+          example: '2024-01-01T00:00:00.000Z'
+      required:
+        - id
+        - item
+        - status
+        - createdAt
+
+    OrderResponse:
+      type: object
+      description: Order response
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+      required:
+        - order
+
+    TokenResponse:
+      type: object
+      description: Token response
+      properties:
+        token:
+          type: string
+          description: JWT token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      required:
+        - token
+
+    MessageResponse:
+      type: object
+      description: Message response
+      properties:
+        message:
+          type: string
+          description: Message
+          example: Database reset
+      required:
+        - message
+
+    ErrorResponse:
+      type: object
+      description: Error response
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: Authentication required
+      required:
+        - message
