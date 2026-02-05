@@ -1,5 +1,7 @@
 # プロンプト一覧
 
+> **English version:** For the English version of this document, please refer to [README_en.md](README_en.md).
+
 このディレクトリには、開発・テスト作業を支援するためのプロンプトが含まれています。
 
 ## ファイル命名規則

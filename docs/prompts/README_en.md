@@ -1,5 +1,7 @@
 # Prompt List
 
+> **日本語版:** 日本語版のドキュメントは [README.md](README.md) をご覧ください。
+
 This directory contains prompts to support development and testing tasks.
 
 ## File Naming Convention
@@ -15,7 +17,7 @@ This directory contains prompts to support development and testing tasks.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  1. Create/Update Specification                                  │
-│     Edit spec.md                                                 │
+│     Edit spec_en.md                                              │
 │     Prompt: 1-update-spec_en.md                                  │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
@@ -74,9 +76,9 @@ This directory contains prompts to support development and testing tasks.
 ### Adding a New API
 
 ```bash
-# 1. Update spec.md
+# 1. Update spec_en.md
 # 2. Generate tests
-# "Read spec.md and follow 2-generate-test_en.md to update server.test.js"
+# "Read spec_en.md and follow 2-generate-test_en.md to update server.test.js"
 
 # 3. Implement
 # "Follow 3-implement_en.md to implement server.js"

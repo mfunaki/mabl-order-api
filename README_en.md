@@ -1,5 +1,7 @@
 # mabl-order-api
 
+> **日本語版:** 日本語版のドキュメントは [README.md](README.md) をご覧ください。
+
 A REST API server for order management, created for demonstrating mabl's automated testing capabilities.
 It intentionally includes state transitions and errors, making it suitable for demonstrating mabl's API testing features.
 
@@ -99,3 +101,35 @@ created --> paid --> shipped
 - `created`: Immediately after order creation
 - `paid`: Payment completed
 - `shipped`: Shipped
+
+## Development History
+
+This project was developed using TDD (Test-Driven Development).
+
+1. **Specification**: Described API specifications in natural language in [spec_en.md](spec_en.md)
+2. **Test Creation**: Implemented test cases in [server.test.js](server.test.js) (all tests fail at this point)
+3. **Implementation**: Implemented [server.js](server.js) to pass all tests
+4. **API Documentation**: Documented specifications in OpenAPI format in [openapi.yaml](openapi.yaml) / [openapi_en.yaml](openapi_en.yaml)
+
+For detailed development flow, please refer to [docs/prompts/README_en.md](docs/prompts/README_en.md).
+
+## API Documentation
+
+### File Naming Convention
+
+| Type | Japanese | English |
+|------|----------|---------|
+| OpenAPI Spec | `openapi.yaml` | `openapi_en.yaml` |
+| HTML Docs | `docs/api.html` | `docs/api_en.html` |
+
+### Generating HTML API Documentation
+
+```bash
+# Generate both Japanese and English versions
+npx @redocly/cli build-docs openapi.yaml -o docs/api.html && \
+npx @redocly/cli build-docs openapi_en.yaml -o docs/api_en.html
+```
+
+Generated HTML can be viewed at:
+- Japanese: [docs/api.html](docs/api.html)
+- English: [docs/api_en.html](docs/api_en.html)

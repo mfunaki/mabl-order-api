@@ -1,5 +1,7 @@
 # mabl-order-api
 
+> **English version:** For the English version of this document, please refer to [README_en.md](README_en.md).
+
 mablの自動テストデモ用に作成された、注文管理REST APIサーバーです。
 意図的にステート遷移やエラーを含めており、mablのAPIテスト機能をデモするのに適しています。
 
