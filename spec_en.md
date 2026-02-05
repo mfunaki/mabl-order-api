@@ -1,58 +1,297 @@
-Implement a REST API server using Node.js and Express for demonstrating mabl's API testing capabilities.
-Use an in-memory array for data management instead of a database for simplicity.
+# mabl-order-api Specification
 
-## 1. Project Configuration
-- **Project name (package.json name):** `mabl-order-api`
-- Run on port `3000`.
-- Enable CORS (for access from mabl's cloud execution environment).
-- Use `express.json()` as body parser.
-- Implement error handling and return appropriate HTTP status codes (200, 400, 401, 404).
+> **Japanese version:** For the Japanese version of this document, please refer to [spec.md](spec.md).
 
-## 2. Authentication (JWT)
-- Use the `jsonwebtoken` library.
-- Secret key can be hardcoded (e.g., "secret_key_demo").
-- **POST /login**
-    - Request: `{ "username": "demo", "password": "password" }` (only this combination succeeds)
-    - Response: `{ "token": "..." }`
-- **Authentication Middleware**
-    - Protect all routes under `/api/orders`.
-    - Validate the header `Authorization: Bearer <token>`.
+## 1. Project Overview
 
-## 3. Utilities (Demo Environment Reset)
-- **POST /api/reset**
-    - Delete all order data from memory and empty it.
-    - No authentication required (for easy demo setup).
-    - Response: `{ "message": "Database reset" }`
-- **POST /api/seed**
-    - Reset memory data and create initial demo data (e.g., one order with ID "1", status "created").
-    - No authentication required.
+### Purpose
+A REST API server for demonstrating mabl's API testing capabilities. It intentionally includes state transitions and errors, making it suitable for demonstrating mabl's API testing features.
 
-## 4. Business Logic (Order State Machine)
-Order data structure: `{ id: string, item: string, status: string, createdAt: date }`
-Possible status transitions: `created` -> `paid` -> `shipped`
+### Technology Stack
+- **Runtime:** Node.js
+- **Framework:** Express
+- **Authentication:** jsonwebtoken (JWT)
+- **Data Store:** In-memory array (no database)
+- **Port:** 3000
 
-- **POST /api/orders**
-    - Create a new order. Initial status is `created`.
-    - Include the created order object in the response.
-- **GET /api/orders/:id**
-    - Return order information for the specified ID.
-- **POST /api/orders/:id/pay**
-    - Update status to `paid`.
-    - **[Important: Success Case]** Succeeds only when current status is `created` (200 OK).
-    - **[Important: Error Case]** If already `paid` or `shipped`, return **400 Bad Request** with error message "Payment has already been completed".
-- **POST /api/orders/:id/ship**
-    - Update status to `shipped`.
-    - **[Important: Success Case]** Succeeds only when current status is `paid` (200 OK).
-    - **[Important: Error Case]** If status is `created` (unpaid), return **400 Bad Request** with error message "Cannot ship because payment has not been completed".
+### Configuration
+- CORS enabled (for access from mabl's cloud execution environment)
+- Body parser: `express.json()`
 
-## Output Requirements
-Generate code to create the following files:
-1. **package.json**
-    - name should be `mabl-order-api`.
-    - Dependencies: express, jsonwebtoken, cors, body-parser
-2. **server.js**
-    - Implementation code satisfying all above requirements.
-3. **README.md**
-    - Project overview.
-    - How to start (`npm install` -> `node server.js`).
-    - Specifications for each endpoint and sample `curl` commands for verification (especially examples of getting a token with `/login` and using it to call `/orders`).
+## 2. Authentication
+
+### Authentication Flow
+1. Obtain JWT token via `POST /login`
+2. Call APIs with the obtained token in the `Authorization` header
+
+### Credentials
+- **Username:** `demo`
+- **Password:** `password`
+- **Secret key:** `secret_key_demo` (hardcoded)
+- **Token expiration:** 1 hour
+
+### Required Headers
+```
+Authorization: Bearer <token>
+```
+
+### Endpoints Requiring Authentication
+- All routes under `/api/orders`
+
+### Endpoints Not Requiring Authentication
+- `POST /login`
+- `POST /api/reset`
+- `POST /api/seed`
+
+## 3. Endpoint List
+
+### POST /login
+
+Login to obtain a JWT token.
+
+**Request:**
+```json
+{
+  "username": "demo",
+  "password": "password"
+}
+```
+
+**Response (Success - 200):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response (Authentication Failed - 401):**
+```json
+{
+  "message": "Authentication failed"
+}
+```
+
+---
+
+### POST /api/reset
+
+Delete all order data from memory and reset. No authentication required.
+
+**Request:** None
+
+**Response (Success - 200):**
+```json
+{
+  "message": "Database reset"
+}
+```
+
+---
+
+### POST /api/seed
+
+Reset memory data and create initial demo data (one order). No authentication required.
+
+**Request:** None
+
+**Response (Success - 200):**
+```json
+{
+  "order": {
+    "id": "1",
+    "item": "Sample Item",
+    "status": "created",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+### POST /api/orders
+
+Create a new order. Initial status is `created`. **Authentication required**
+
+**Request:**
+```json
+{
+  "item": "Item Name"
+}
+```
+
+**Response (Success - 200):**
+```json
+{
+  "order": {
+    "id": "1",
+    "item": "Item Name",
+    "status": "created",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Response (Authentication Error - 401):**
+```json
+{
+  "message": "Authentication required"
+}
+```
+
+---
+
+### GET /api/orders/:id
+
+Retrieve order information for the specified ID. **Authentication required**
+
+**Path Parameters:**
+- `id` - Order ID
+
+**Response (Success - 200):**
+```json
+{
+  "order": {
+    "id": "1",
+    "item": "Item Name",
+    "status": "created",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Response (Order Not Found - 404):**
+```json
+{
+  "message": "Order not found"
+}
+```
+
+---
+
+### POST /api/orders/:id/pay
+
+Update order status to paid (`paid`). **Authentication required**
+
+**Path Parameters:**
+- `id` - Order ID
+
+**Success Condition:** Current status must be `created`
+
+**Response (Success - 200):**
+```json
+{
+  "order": {
+    "id": "1",
+    "item": "Item Name",
+    "status": "paid",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Response (Already Paid - 400):**
+```json
+{
+  "message": "Payment has already been completed"
+}
+```
+
+**Response (Order Not Found - 404):**
+```json
+{
+  "message": "Order not found"
+}
+```
+
+---
+
+### POST /api/orders/:id/ship
+
+Update order status to shipped (`shipped`). **Authentication required**
+
+**Path Parameters:**
+- `id` - Order ID
+
+**Success Condition:** Current status must be `paid`
+
+**Response (Success - 200):**
+```json
+{
+  "order": {
+    "id": "1",
+    "item": "Item Name",
+    "status": "shipped",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Response (Unpaid - 400):**
+```json
+{
+  "message": "Cannot ship because payment has not been completed"
+}
+```
+
+**Response (Order Not Found - 404):**
+```json
+{
+  "message": "Order not found"
+}
+```
+
+## 4. Business Logic
+
+### Order Data Structure
+
+```json
+{
+  "id": "string",
+  "item": "string",
+  "status": "string",
+  "createdAt": "ISO 8601 format datetime string"
+}
+```
+
+### State Transitions
+
+```
+created --> paid --> shipped
+```
+
+| Status | Description |
+|--------|-------------|
+| `created` | Immediately after order creation (unpaid) |
+| `paid` | Payment completed |
+| `shipped` | Shipped |
+
+### Transition Rules
+
+| Current Status | Allowed Action | Resulting Status |
+|---------------|----------------|------------------|
+| `created` | pay | `paid` |
+| `paid` | ship | `shipped` |
+| `created` | ship | Error (400) |
+| `paid` | pay | Error (400) |
+| `shipped` | pay | Error (400) |
+| `shipped` | ship | `shipped` (no change) |
+
+### Error Conditions
+
+| Endpoint | Condition | Status Code | Message |
+|----------|-----------|-------------|---------|
+| `/login` | Invalid credentials | 401 | Authentication failed |
+| `/api/orders/*` | No Authorization header | 401 | Authentication required |
+| `/api/orders/*` | Invalid token | 401 | Invalid token |
+| `/api/orders/:id` | Order does not exist | 404 | Order not found |
+| `/api/orders/:id/pay` | Already paid | 400 | Payment has already been completed |
+| `/api/orders/:id/ship` | Unpaid | 400 | Cannot ship because payment has not been completed |
+
+## 5. HTTP Status Codes
+
+| Code | Meaning | Usage |
+|------|---------|-------|
+| 200 | Success | Request processed successfully |
+| 400 | Bad Request | Business rule violation |
+| 401 | Unauthorized | Authentication failure, invalid token |
+| 404 | Not Found | Specified resource does not exist |
