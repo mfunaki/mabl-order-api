@@ -2,23 +2,59 @@
 
 このディレクトリには、開発・テスト作業を支援するためのプロンプトが含まれています。
 
-## プロンプト適用フロー
+## ファイル命名規則
+
+| 種類 | 日本語版 | 英語版 |
+|------|---------|--------|
+| プロンプト | `X-name.md` | `X-name_en.md` |
+| OpenAPI仕様 | `openapi.yaml` | `openapi_en.yaml` |
+| HTML仕様書 | `docs/api.html` | `docs/api_en.html` |
+
+## 開発フロー
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      server.js を変更                            │
+│  1. 仕様書を作成・更新                                           │
+│     spec.md を編集                                               │
+│     プロンプト: 1-update-spec.md                                 │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  1-generate-openapi.md    OpenAPI仕様（YAML）を再生成            │
+│  2. テストを作成・更新（TDD）                                    │
+│     server.test.js を生成                                        │
+│     プロンプト: 2-generate-test.md                               │
+│     ※この時点でテストは失敗する                                  │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  2-generate-html-docs.md  HTML仕様書を再生成                     │
+│  3. 実装                                                         │
+│     server.js を実装                                             │
+│     プロンプト: 3-implement.md                                   │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  3-testcreation-api-mabl.md  mablでAPIテストを作成               │
+│  4. テスト実行                                                   │
+│     npm test                                                     │
+│     プロンプト: 4-run-test.md                                    │
+│     ※すべてのテストがパスするまで 3→4 を繰り返す                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  5. OpenAPI仕様書を生成                                          │
+│     openapi.yaml, openapi_en.yaml を生成                         │
+│     プロンプト: 5-generate-openapi.md                            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  6. HTML仕様書を生成                                             │
+│     docs/api.html, docs/api_en.html を生成                       │
+│     プロンプト: 6-generate-html-docs.md                          │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  7. mablテストを作成（オプション）                               │
+│     mabl でAPIテストを作成                                       │
+│     プロンプト: 7-create-mabl-test.md                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -26,77 +62,102 @@
 
 | 変更内容 | 実行するプロンプト |
 |---------|-------------------|
-| server.js のエンドポイント追加・変更 | 1 → 2 |
-| server.js のレスポンス形式変更 | 1 → 2 |
-| OpenAPI仕様（YAML）のみ手動修正 | 2 のみ |
-| 新しいAPIテストを作成したい | 3 のみ |
-| server.js 変更後にmablテストも更新したい | 1 → 2 → 3 |
+| 新しいAPIを設計 | 1 → 2 → 3 → 4 → 5 → 6 |
+| 既存APIの仕様変更 | 1 → 2 → 3 → 4 → 5 → 6 |
+| バグ修正（テストあり） | 3 → 4 |
+| バグ修正（テストなし） | 2 → 3 → 4 → 5 → 6 |
+| ドキュメントのみ更新 | 5 → 6 |
+| mablテストを追加 | 7 |
 
 ## プロンプト詳細
 
-### 1-generate-openapi.md
+### 1-update-spec.md / 1-update-spec_en.md
 
-**目的**: server.js のコードを解析して OpenAPI 仕様ファイルを生成
+**目的**: 仕様書（spec.md）の作成・更新
 
-**いつ使う**:
-- server.js にエンドポイントを追加した時
-- リクエスト/レスポンスの形式を変更した時
-- エラーハンドリングを追加・変更した時
-
-**出力ファイル**:
-- `openapi.yaml` （英語版）
-- `openapi-ja.yaml` （日本語版）
-
-**実行方法**:
-```
-server.js を読み取り、docs/prompts/1-generate-openapi.md の指示に従って
-openapi.yaml と openapi-ja.yaml を生成してください。
-```
+**出力**: `spec.md`
 
 ---
 
-### 2-generate-html-docs.md
+### 2-generate-test.md / 2-generate-test_en.md
 
-**目的**: OpenAPI 仕様ファイルから HTML 形式の API 仕様書を生成
+**目的**: TDDに基づくテストファイルの生成
 
-**いつ使う**:
-- OpenAPI 仕様（YAML）を更新した後
-- API ドキュメントを最新化したい時
+**出力**: `server.test.js`
 
-**出力ファイル**:
-- `docs/api.html` （英語版）
-- `docs/api-ja.html` （日本語版）
+**注意**: この時点でテストは失敗することを確認
 
-**実行方法**:
+---
+
+### 3-implement.md / 3-implement_en.md
+
+**目的**: テストをパスする実装の作成
+
+**出力**: `server.js`
+
+---
+
+### 4-run-test.md / 4-run-test_en.md
+
+**目的**: テストの実行と確認
+
+**コマンド**: `npm test`
+
+---
+
+### 5-generate-openapi.md / 5-generate-openapi_en.md
+
+**目的**: OpenAPI仕様ファイルの生成
+
+**出力**:
+- `openapi.yaml` （日本語版）
+- `openapi_en.yaml` （英語版）
+
+---
+
+### 6-generate-html-docs.md / 6-generate-html-docs_en.md
+
+**目的**: HTML形式のAPI仕様書を生成
+
+**コマンド**:
 ```bash
-npx @redocly/cli build-docs openapi-ja.yaml -o docs/api-ja.html && \
-npx @redocly/cli build-docs openapi.yaml -o docs/api.html
+npx @redocly/cli build-docs openapi.yaml -o docs/api.html && \
+npx @redocly/cli build-docs openapi_en.yaml -o docs/api_en.html
 ```
+
+**出力**:
+- `docs/api.html` （日本語版）
+- `docs/api_en.html` （英語版）
 
 ---
 
-### 3-testcreation-api-mabl.md
+### 7-create-mabl-test.md / 7-create-mabl-test_en.md
 
-**目的**: mabl で API テストを作成するための指示
+**目的**: mabl でAPIテストを作成
 
-**いつ使う**:
-- 新しい API テストを mabl で作成したい時
-- API の正常系・異常系テストを追加したい時
-
-**実行方法**:
-mabl MCP サーバー経由で、このプロンプトの内容に従ってテストを作成
+**実行方法**: mabl MCP サーバー経由
 
 ---
 
 ## クイックリファレンス
 
-### server.js 変更後の一括更新
+### 新しいAPIを追加する場合
 
 ```bash
-# 1. Claude Code で OpenAPI 仕様を更新
-# 「server.js を読み取り、1-generate-openapi.md の指示に従って YAML を更新」
+# 1. spec.md を更新
+# 2. テストを生成
+# 「spec.md を読み取り、2-generate-test.md の指示に従って server.test.js を更新」
 
-# 2. HTML 仕様書を再生成
-npx @redocly/cli build-docs openapi-ja.yaml -o docs/api-ja.html && \
-npx @redocly/cli build-docs openapi.yaml -o docs/api.html
+# 3. 実装
+# 「3-implement.md の指示に従って server.js を実装」
+
+# 4. テスト実行
+npm test
+
+# 5. OpenAPI仕様を生成
+# 「5-generate-openapi.md の指示に従って openapi.yaml と openapi_en.yaml を生成」
+
+# 6. HTML仕様書を生成
+npx @redocly/cli build-docs openapi.yaml -o docs/api.html && \
+npx @redocly/cli build-docs openapi_en.yaml -o docs/api_en.html
 ```

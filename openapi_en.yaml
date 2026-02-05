@@ -2,35 +2,33 @@ openapi: 3.0.0
 info:
   title: mabl-order-api
   description: |
-    mablの自動テスト機能をデモンストレーションするために作成された、注文管理用のREST APIサーバーです。
-    意図的にステート遷移やエラーを含んでいます。
+    A REST API server for order management, created for demonstrating mabl's automated testing capabilities.
+    It intentionally includes state transitions and errors.
   version: 1.0.0
 servers:
   - url: http://localhost:3000
-    description: ローカル開発サーバー
+    description: Local Development Server
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWTトークンによる認証
   schemas:
     Order:
       type: object
-      description: 注文情報
       properties:
         id:
           type: string
-          description: 注文の一意識別子
+          description: Unique identifier for the order
           example: "1"
         item:
           type: string
-          description: 商品名
-          example: "サンプル商品"
+          description: Name of the item
+          example: "Sample Item"
         status:
           type: string
-          description: 注文の現在のステータス
+          description: Current status of the order
           enum:
             - created
             - paid
@@ -39,48 +37,35 @@ components:
         createdAt:
           type: string
           format: date-time
-          description: 注文が作成された日時
+          description: Timestamp when the order was created
     OrderResponse:
       type: object
-      description: 注文情報を含むレスポンス
       properties:
         order:
           $ref: '#/components/schemas/Order'
     MessageResponse:
       type: object
-      description: メッセージを含むレスポンス
       properties:
         message:
           type: string
-          description: メッセージ
           example: "Database reset"
     TokenResponse:
       type: object
-      description: トークンを含むレスポンス
       properties:
         token:
           type: string
-          description: 認証済みリクエストに使用するJWTトークン
+          description: JWT token for authenticated requests
     ErrorResponse:
       type: object
-      description: エラーレスポンス
       properties:
         message:
           type: string
-          description: エラーメッセージ
-          example: "エラーの説明"
+          example: "Error description"
 paths:
   /login:
     post:
-      summary: ログイン（JWTトークン取得）
-      description: |
-        ユーザー認証を行い、JWTトークンを取得します。
-
-        **テスト用認証情報:**
-        - ユーザー名: `demo`
-        - パスワード: `password`
-      tags:
-        - 認証
+      summary: Authenticate and get JWT token
+      description: Use username 'demo' and password 'password'.
       requestBody:
         required: true
         content:
@@ -93,68 +78,48 @@ paths:
               properties:
                 username:
                   type: string
-                  description: ユーザー名
                   example: "demo"
                 password:
                   type: string
-                  description: パスワード
                   example: "password"
       responses:
         '200':
-          description: 認証成功
+          description: Authentication successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
         '401':
-          description: 認証失敗（ユーザー名またはパスワードが不正）
+          description: Authentication failed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/reset:
     post:
-      summary: データベースリセット
-      description: |
-        メモリ上のすべての注文データを削除します。
-
-        **認証不要**です。テスト実行前のクリーンアップに使用します。
-      tags:
-        - データ管理
+      summary: Reset database
+      description: Deletes all orders from memory. No authentication required.
       responses:
         '200':
-          description: リセット成功
+          description: Database reset successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
   /api/seed:
     post:
-      summary: デモデータ作成
-      description: |
-        データをリセットし、デモ用の注文を1件作成します。
-
-        **作成されるデータ:**
-        - ID: 1
-        - ステータス: created
-
-        **認証不要**です。テスト実行前の初期データ投入に使用します。
-      tags:
-        - データ管理
+      summary: Seed database
+      description: Resets data and creates a demo order (ID 1, status created). No authentication required.
       responses:
         '200':
-          description: シード成功
+          description: Seed successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
   /api/orders:
     post:
-      summary: 注文作成
-      description: |
-        新しい注文を作成します。作成された注文のステータスは `created` になります。
-      tags:
-        - 注文管理
+      summary: Create a new order
       security:
         - bearerAuth: []
       requestBody:
@@ -168,28 +133,23 @@ paths:
               properties:
                 item:
                   type: string
-                  description: 商品名
-                  example: "新しい商品"
+                  example: "New Item"
       responses:
         '200':
-          description: 注文作成成功
+          description: Order created successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
         '401':
-          description: 認証エラー（トークンが無効または未提供）
+          description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}:
     get:
-      summary: 注文詳細取得
-      description: |
-        指定されたIDの注文情報を取得します。
-      tags:
-        - 注文管理
+      summary: Get order details
       security:
         - bearerAuth: []
       parameters:
@@ -198,40 +158,30 @@ paths:
           schema:
             type: string
           required: true
-          description: 注文ID
+          description: Order ID
       responses:
         '200':
-          description: 注文詳細
+          description: Order details
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
         '401':
-          description: 認証エラー（トークンが無効または未提供）
+          description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: 注文が見つからない
+          description: Order not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}/pay:
     post:
-      summary: 支払い処理
-      description: |
-        指定された注文の支払いを処理します。
-
-        **ステータス遷移:**
-        - `created` → `paid`
-
-        **エラー条件:**
-        - 既に支払い済み（`paid`）の場合は400エラー
-        - 既に発送済み（`shipped`）の場合は400エラー
-      tags:
-        - 注文管理
+      summary: Process payment for an order
+      description: Transitions status from 'created' to 'paid'.
       security:
         - bearerAuth: []
       parameters:
@@ -240,46 +190,36 @@ paths:
           schema:
             type: string
           required: true
-          description: 注文ID
+          description: Order ID
       responses:
         '200':
-          description: 支払い成功
+          description: Payment successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
         '400':
-          description: 不正なステータス遷移（例：既に支払い済み）
+          description: Invalid state transition (e.g., already paid)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: 認証エラー（トークンが無効または未提供）
+          description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: 注文が見つからない
+          description: Order not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/orders/{id}/ship:
     post:
-      summary: 発送処理
-      description: |
-        指定された注文を発送処理します。
-
-        **ステータス遷移:**
-        - `paid` → `shipped`
-
-        **エラー条件:**
-        - 未支払い（`created`）の場合は400エラー
-        - 既に発送済み（`shipped`）の場合は400エラー
-      tags:
-        - 注文管理
+      summary: Ship an order
+      description: Transitions status from 'paid' to 'shipped'.
       security:
         - bearerAuth: []
       parameters:
@@ -288,28 +228,28 @@ paths:
           schema:
             type: string
           required: true
-          description: 注文ID
+          description: Order ID
       responses:
         '200':
-          description: 発送成功
+          description: Shipping successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
         '400':
-          description: 不正なステータス遷移（例：未支払い）
+          description: Invalid state transition (e.g., not paid yet)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: 認証エラー（トークンが無効または未提供）
+          description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: 注文が見つからない
+          description: Order not found
           content:
             application/json:
               schema:

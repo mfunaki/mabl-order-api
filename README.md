@@ -107,14 +107,27 @@ created --> paid --> shipped
 1. **仕様策定**: [spec.md](spec.md) に自然言語でAPI仕様を記述
 2. **テスト作成**: [server.test.js](server.test.js) にテストケースを実装（この時点では全テスト失敗）
 3. **実装**: [server.js](server.js) を実装し、全テストをパス
-4. **API仕様書作成**: [openapi.yaml](openapi.yaml) / [openapi-ja.yaml](openapi-ja.yaml) にOpenAPI形式で仕様をドキュメント化
+4. **API仕様書作成**: [openapi.yaml](openapi.yaml) / [openapi_en.yaml](openapi_en.yaml) にOpenAPI形式で仕様をドキュメント化
+
+詳細な開発フローは [docs/prompts/README.md](docs/prompts/README.md) を参照してください。
 
 ## API仕様書
 
-HTMLフォーマットのAPI仕様書を生成するには：
+### ファイル命名規則
+
+| 種類 | 日本語版 | 英語版 |
+|------|---------|--------|
+| OpenAPI仕様 | `openapi.yaml` | `openapi_en.yaml` |
+| HTML仕様書 | `docs/api.html` | `docs/api_en.html` |
+
+### HTMLフォーマットのAPI仕様書を生成するには
 
 ```bash
-npx @redocly/cli build-docs openapi-ja.yaml -o docs/api-ja.html
+# 日本語版と英語版を生成
+npx @redocly/cli build-docs openapi.yaml -o docs/api.html && \
+npx @redocly/cli build-docs openapi_en.yaml -o docs/api_en.html
 ```
 
-生成されたHTMLは [docs/api-ja.html](docs/api-ja.html) で確認できます。
+生成されたHTMLは以下で確認できます：
+- 日本語版: [docs/api.html](docs/api.html)
+- 英語版: [docs/api_en.html](docs/api_en.html)
