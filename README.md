@@ -99,3 +99,22 @@ created --> paid --> shipped
 - `created`: 注文作成直後
 - `paid`: 支払い完了
 - `shipped`: 発送済み
+
+## 開発経緯
+
+このプロジェクトはTDD（テスト駆動開発）で開発されました。
+
+1. **仕様策定**: [spec.md](spec.md) に自然言語でAPI仕様を記述
+2. **テスト作成**: [server.test.js](server.test.js) にテストケースを実装（この時点では全テスト失敗）
+3. **実装**: [server.js](server.js) を実装し、全テストをパス
+4. **API仕様書作成**: [openapi.yaml](openapi.yaml) / [openapi-ja.yaml](openapi-ja.yaml) にOpenAPI形式で仕様をドキュメント化
+
+## API仕様書
+
+HTMLフォーマットのAPI仕様書を生成するには：
+
+```bash
+npx @redocly/cli build-docs openapi-ja.yaml -o docs/api-ja.html
+```
+
+生成されたHTMLは [docs/api-ja.html](docs/api-ja.html) で確認できます。
