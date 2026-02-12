@@ -67,6 +67,14 @@ describe('mabl-order-api', () => {
       expect(res.headers['content-type']).toMatch(/yaml|plain/);
       expect(res.text).toContain('openapi:');
     });
+
+    it('GET /openapi_en.yaml でYAMLが返される', async () => {
+      const res = await request(app).get('/openapi_en.yaml');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/yaml|plain/);
+      expect(res.text).toContain('openapi:');
+    });
   });
 
   // =========================================
