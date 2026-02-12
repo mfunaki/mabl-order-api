@@ -10,6 +10,32 @@ describe('mabl-order-api', () => {
   });
 
   // =========================================
+  // ルートパス
+  // =========================================
+  describe('GET /', () => {
+    it('HTMLページが返される', async () => {
+      const res = await request(app).get('/');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/text\/html/);
+    });
+
+    it('ログインフォームが含まれている', async () => {
+      const res = await request(app).get('/');
+
+      expect(res.text).toContain('username');
+      expect(res.text).toContain('password');
+      expect(res.text).toContain('type="submit"');
+    });
+
+    it('注文一覧を表示する要素が含まれている', async () => {
+      const res = await request(app).get('/');
+
+      expect(res.text).toContain('orders');
+    });
+  });
+
+  // =========================================
   // 認証エンドポイント
   // =========================================
   describe('POST /login', () => {
