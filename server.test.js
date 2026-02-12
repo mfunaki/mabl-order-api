@@ -33,6 +33,40 @@ describe('mabl-order-api', () => {
 
       expect(res.text).toContain('orders');
     });
+
+    it('API仕様へのリンクが含まれている', async () => {
+      const res = await request(app).get('/');
+
+      expect(res.text).toContain('api.html');
+      expect(res.text).toContain('openapi.yaml');
+    });
+  });
+
+  // =========================================
+  // API仕様ページ
+  // =========================================
+  describe('API仕様ページ', () => {
+    it('GET /api.html でHTMLが返される', async () => {
+      const res = await request(app).get('/api.html');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/text\/html/);
+    });
+
+    it('GET /api_en.html でHTMLが返される', async () => {
+      const res = await request(app).get('/api_en.html');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/text\/html/);
+    });
+
+    it('GET /openapi.yaml でYAMLが返される', async () => {
+      const res = await request(app).get('/openapi.yaml');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/yaml|plain/);
+      expect(res.text).toContain('openapi:');
+    });
   });
 
   // =========================================
