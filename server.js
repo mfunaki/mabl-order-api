@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const SECRET_KEY = 'secret_key_demo';
@@ -254,11 +256,33 @@ app.get('/', (req, res) => {
       color: #999;
       padding: 40px 20px;
     }
+    .api-links {
+      background: #e9ecef;
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .api-links a {
+      color: #007bff;
+      text-decoration: none;
+      margin-right: 16px;
+    }
+    .api-links a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>mabl Order API - デモアプリ</h1>
+
+    <!-- API仕様リンク -->
+    <div class="api-links">
+      <strong>📚 API仕様:</strong>
+      <a href="/api.html" target="_blank">HTML版</a>
+      <a href="/openapi.yaml" target="_blank">OpenAPI (YAML)</a>
+    </div>
 
     <!-- ログインフォーム -->
     <div id="login-section" class="card">
@@ -447,6 +471,42 @@ app.get('/', (req, res) => {
 </html>
   `;
   res.send(html);
+});
+
+// GET /api.html - API仕様ページ（日本語）
+app.get('/api.html', (req, res) => {
+  const filePath = path.join(__dirname, 'docs', 'api.html');
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(404).send('File not found');
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(data);
+  });
+});
+
+// GET /api_en.html - API仕様ページ（英語）
+app.get('/api_en.html', (req, res) => {
+  const filePath = path.join(__dirname, 'docs', 'api_en.html');
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(404).send('File not found');
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(data);
+  });
+});
+
+// GET /openapi.yaml - OpenAPI仕様書
+app.get('/openapi.yaml', (req, res) => {
+  const filePath = path.join(__dirname, 'openapi.yaml');
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(404).send('File not found');
+    }
+    res.setHeader('Content-Type', 'text/yaml; charset=utf-8');
+    res.send(data);
+  });
 });
 
 // サーバー起動（テスト時は起動しない）
