@@ -509,6 +509,18 @@ app.get('/openapi.yaml', (req, res) => {
   });
 });
 
+// GET /openapi_en.yaml - OpenAPI仕様書（英語版）
+app.get('/openapi_en.yaml', (req, res) => {
+  const filePath = path.join(__dirname, 'openapi_en.yaml');
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(404).send('File not found');
+    }
+    res.setHeader('Content-Type', 'text/yaml; charset=utf-8');
+    res.send(data);
+  });
+});
+
 // サーバー起動（テスト時は起動しない）
 if (require.main === module) {
   const PORT = 3000;

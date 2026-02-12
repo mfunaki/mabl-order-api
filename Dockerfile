@@ -8,6 +8,7 @@ RUN npm install --production
 COPY server.js ./
 COPY docs/ ./docs/
 COPY openapi.yaml ./
+COPY openapi_en.yaml ./
 
 EXPOSE 3000
 
