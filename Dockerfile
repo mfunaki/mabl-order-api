@@ -6,6 +6,8 @@ COPY package*.json ./
 RUN npm install --production
 
 COPY server.js ./
+COPY docs/ ./docs/
+COPY openapi.yaml ./
 
 EXPOSE 3000
 
