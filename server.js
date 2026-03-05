@@ -6,6 +6,7 @@ const path = require('path');
 
 const app = express();
 const SECRET_KEY = 'secret_key_demo';
+const AUTH_MODE = process.env.AUTH_MODE || 'local';
 
 // メモリ上のデータストア
 let orders = [];
@@ -66,7 +67,11 @@ app.post('/api/seed', (req, res) => {
 });
 
 // 認証が必要なルート
-app.use('/api/orders', authMiddleware);
+const activeAuthMiddleware = AUTH_MODE === 'cognito'
+  ? require('./middleware/cognitoAuth')
+  : authMiddleware;
+
+app.use('/api/orders', activeAuthMiddleware);
 
 // POST /api/orders - 注文作成
 app.post('/api/orders', (req, res) => {

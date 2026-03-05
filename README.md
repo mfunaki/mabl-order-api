@@ -102,6 +102,82 @@ created --> paid --> shipped
 - `paid`: 支払い完了
 - `shipped`: 発送済み
 
+## Amazon Cognito 認証の設定
+
+デフォルトでは組み込みのローカルJWT認証（`demo` / `password`）を使用します。
+Amazon Cognitoによる認証に切り替えるには以下の手順で設定してください。
+
+### 前提条件
+
+- AWS アカウントおよび Cognito ユーザープールが作成済みであること
+
+### 手順
+
+**1. パッケージのインストール**
+
+```bash
+npm install aws-jwt-verify
+```
+
+**2. 環境変数の設定**
+
+`.env.example` をコピーして `.env` を作成し、値を設定します。
+
+```bash
+cp .env.example .env
+```
+
+`.env` を編集:
+
+```env
+AUTH_MODE=cognito
+COGNITO_USER_POOL_ID=ap-northeast-1_XXXXXXXXX
+COGNITO_CLIENT_ID=XXXXXXXXXXXXXXXXXXXXXXXXXX
+AWS_REGION=ap-northeast-1
+```
+
+| 変数名 | 説明 | 例 |
+|--------|------|----|
+| `AUTH_MODE` | 認証モード（`local` または `cognito`） | `cognito` |
+| `COGNITO_USER_POOL_ID` | Cognito ユーザープール ID | `ap-northeast-1_AbCdEf123` |
+| `COGNITO_CLIENT_ID` | Cognito アプリクライアント ID | `1a2b3c4d5e...` |
+| `AWS_REGION` | AWS リージョン | `ap-northeast-1` |
+
+**Cognito ユーザープール ID・クライアント ID の確認方法:**
+
+AWS マネジメントコンソール → Cognito → ユーザープール → 対象プールを選択
+- ユーザープール ID: 概要ページに表示
+- クライアント ID: 「アプリの統合」タブ → 「アプリクライアント」に表示
+
+**3. サーバー起動**
+
+```bash
+node -r dotenv/config server.js
+# または dotenv をインストール済みの場合
+node server.js
+```
+
+**4. Cognito トークンの取得と利用**
+
+Cognito で認証してアクセストークンを取得し、`Authorization: Bearer <token>` ヘッダーに指定します。
+
+```bash
+# AWS CLI でトークン取得
+TOKEN=$(aws cognito-idp initiate-auth \
+  --auth-flow USER_PASSWORD_AUTH \
+  --client-id YOUR_CLIENT_ID \
+  --auth-parameters USERNAME=user@example.com,PASSWORD=yourpassword \
+  --region ap-northeast-1 \
+  --query 'AuthenticationResult.AccessToken' \
+  --output text)
+
+# API 呼び出し
+curl http://localhost:3000/api/orders \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+> **注意:** `AUTH_MODE=local`（デフォルト）の場合、Cognito 設定は不要です。ローカルの `POST /login` エンドポイントで取得したトークンが引き続き使用できます。
+
 ## 開発経緯
 
 このプロジェクトはTDD（テスト駆動開発）で開発されました。
