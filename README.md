@@ -176,6 +176,58 @@ curl http://localhost:3000/api/orders \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+### mabl APIテストでのトークン取得（JavaScript スニペット）
+
+mabl の API テストで「JavaScript スニペット」ステップを追加し、以下を記述します：
+
+```javascript
+// Cognito にリクエストしてアクセストークンを取得する
+const response = await fetch(
+  `https://cognito-idp.${mabl.getVariable('aws_region')}.amazonaws.com/`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-amz-json-1.1',
+      'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
+    },
+    body: JSON.stringify({
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: mabl.getVariable('cognito_client_id'),
+      AuthParameters: {
+        USERNAME: mabl.getVariable('cognito_username'),
+        PASSWORD: mabl.getVariable('cognito_password'),
+      },
+    }),
+  }
+);
+
+if (!response.ok) {
+  throw new Error(`Cognito 認証失敗: ${response.status} ${await response.text()}`);
+}
+
+const data = await response.json();
+mabl.setVariable('token', data.AuthenticationResult.AccessToken);
+```
+
+スニペット内で `mabl.getVariable()` を使う値は、mabl の **Environment** に事前登録しておきます：
+
+| 変数名 | 値の例 |
+|---|---|
+| `aws_region` | `ap-northeast-1` |
+| `cognito_client_id` | `1a2b3c4d5e...` |
+| `cognito_username` | `user@example.com` |
+| `cognito_password` | `（シークレット）` |
+
+取得した `token` は後続のステップで `{{token}}` として参照できます。
+
+```
+① JavaScript スニペット  →  mabl.setVariable('token', AccessToken)
+② POST /api/orders       →  Authorization: Bearer {{token}}
+③ GET  /api/orders/{{order_id}}
+④ POST /api/orders/{{order_id}}/pay
+⑤ POST /api/orders/{{order_id}}/ship
+```
+
 > **注意:** `AUTH_MODE=local`（デフォルト）の場合、Cognito 設定は不要です。ローカルの `POST /login` エンドポイントで取得したトークンが引き続き使用できます。
 
 ## 開発経緯

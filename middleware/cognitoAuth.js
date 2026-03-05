@@ -1,41 +1,51 @@
 'use strict';
 
-const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const jwksClient = require('jwks-rsa');
+const jwt = require('jsonwebtoken');
 
-let verifier = null;
+let client = null;
 
-function getVerifier() {
-  if (!verifier) {
+function getJwksClient() {
+  if (!client) {
     const userPoolId = process.env.COGNITO_USER_POOL_ID;
-    const clientId = process.env.COGNITO_CLIENT_ID;
+    const region = process.env.AWS_REGION;
 
-    if (!userPoolId || !clientId) {
-      throw new Error('COGNITO_USER_POOL_ID と COGNITO_CLIENT_ID の環境変数が必要です');
+    if (!userPoolId || !region) {
+      throw new Error('COGNITO_USER_POOL_ID と AWS_REGION の環境変数が必要です');
     }
 
-    verifier = CognitoJwtVerifier.create({
-      userPoolId,
-      tokenUse: 'access',
-      clientId,
+    client = jwksClient({
+      jwksUri: `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/jwks.json`,
+      cache: true,
+      rateLimit: true,
     });
   }
-  return verifier;
+  return client;
 }
 
-const cognitoAuth = async (req, res, next) => {
+function getKey(header, callback) {
+  getJwksClient().getSigningKey(header.kid, (err, key) => {
+    if (err) return callback(err);
+    callback(null, key.getPublicKey());
+  });
+}
+
+const cognitoAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: '認証が必要です' });
   }
 
   const token = authHeader.split(' ')[1];
-  try {
-    const payload = await getVerifier().verify(token);
-    req.user = { username: payload.username || payload.sub };
+  const clientId = process.env.COGNITO_CLIENT_ID;
+
+  jwt.verify(token, getKey, { algorithms: ['RS256'], audience: clientId }, (err, payload) => {
+    if (err) {
+      return res.status(401).json({ message: '無効なトークンです', detail: err.message });
+    }
+    req.user = { username: payload['cognito:username'] || payload.sub };
     next();
-  } catch (err) {
-    return res.status(401).json({ message: '無効なトークンです', detail: err.message });
-  }
+  });
 };
 
 module.exports = cognitoAuth;
