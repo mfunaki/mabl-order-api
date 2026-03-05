@@ -112,12 +112,13 @@ created --> paid --> shipped
 
 ## Amazon Cognito 認証の設定
 
-デフォルトでは組み込みのローカルJWT認証（`demo` / `password`）を使用します。
-Amazon Cognitoによる認証に切り替えるには以下の手順で設定してください。
+デフォルトではローカル認証（`demo` / `password`）を使用します。
+以下の環境変数を設定すると、`POST /login` の資格情報検証が自動的に Amazon Cognito に切り替わります。クライアント側の動作（`/login` → JWT → API呼び出し）は変わりません。
 
 ### 前提条件
 
 - AWS アカウントおよび Cognito ユーザープールが作成済みであること
+- アプリクライアントで `ALLOW_USER_PASSWORD_AUTH` が有効になっていること
 
 ### 手順
 
@@ -132,24 +133,24 @@ cp .env.example .env
 `.env` を編集:
 
 ```env
-AUTH_MODE=cognito
 COGNITO_USER_POOL_ID=ap-northeast-1_XXXXXXXXX
 COGNITO_CLIENT_ID=XXXXXXXXXXXXXXXXXXXXXXXXXX
+COGNITO_CLIENT_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXX
 AWS_REGION=ap-northeast-1
 ```
 
 | 変数名 | 説明 | 例 |
-|--------|------|----|
-| `AUTH_MODE` | 認証モード（`local` または `cognito`） | `cognito` |
+|--------|------|-----|
 | `COGNITO_USER_POOL_ID` | Cognito ユーザープール ID | `ap-northeast-1_AbCdEf123` |
 | `COGNITO_CLIENT_ID` | Cognito アプリクライアント ID | `1a2b3c4d5e...` |
+| `COGNITO_CLIENT_SECRET` | アプリクライアントシークレット（シークレットなしの場合は省略可） | `xxxx...` |
 | `AWS_REGION` | AWS リージョン | `ap-northeast-1` |
 
-**Cognito ユーザープール ID・クライアント ID の確認方法:**
+**各 ID・シークレットの確認方法:**
 
 AWS マネジメントコンソール → Cognito → ユーザープール → 対象プールを選択
 - ユーザープール ID: 概要ページに表示
-- クライアント ID: 「アプリの統合」タブ → 「アプリクライアント」に表示
+- クライアント ID・シークレット: 「アプリの統合」タブ → 「アプリクライアント」→「クライアントのシークレットを表示」
 
 **2. サーバー起動**
 
@@ -159,75 +160,54 @@ node -r dotenv/config server.js
 node server.js
 ```
 
-**3. Cognito トークンの取得と利用**
-
-Cognito で認証してアクセストークンを取得し、`Authorization: Bearer <token>` ヘッダーに指定します。
+起動後、`GET /api/health` で認証バックエンドを確認できます:
 
 ```bash
-# AWS CLI でトークン取得
-TOKEN=$(aws cognito-idp initiate-auth \
-  --auth-flow USER_PASSWORD_AUTH \
-  --client-id YOUR_CLIENT_ID \
-  --auth-parameters USERNAME=user@example.com,PASSWORD=yourpassword \
-  --region ap-northeast-1 \
-  --query 'AuthenticationResult.AccessToken' \
-  --output text)
-
-# API 呼び出し
-curl http://localhost:3000/api/orders \
-  -H "Authorization: Bearer $TOKEN"
+curl http://localhost:3000/api/health
+# {"status":"ok","authBackend":"cognito",...}
 ```
+
+### 認証フロー
+
+```
+① POST /login（Cognitoユーザー名・パスワード）
+      ↓ サーバーが内部でCognito InitiateAuth を呼び出し
+② 認証成功 → ローカルJWT 発行
+      ↓
+③ GET/POST /api/orders/*（Authorization: Bearer <ローカルJWT>）
+```
+
+Cognito 環境変数が未設定の場合は、ローカル認証（`demo` / `password`）にフォールバックします。
 
 ### Postman でのトークン取得と検証
 
-#### Pre-request Script（トークン取得）
+#### Pre-request Script（ログイン）
 
 コレクションまたはリクエストの「Pre-request Script」タブに記述します：
 
 ```javascript
-var region       = pm.variables.get('aws_region');
-var clientId     = pm.variables.get('cognito_client_id');
-var clientSecret = pm.variables.get('cognito_client_secret');
-var username     = pm.variables.get('api.credentials.username');
-var password     = pm.variables.get('api.credentials.password');
-
-// SECRET_HASH = Base64( HMAC-SHA256( clientSecret, username + clientId ) )
-var secretHash = CryptoJS.enc.Base64.stringify(
-  CryptoJS.HmacSHA256(username + clientId, clientSecret)
-);
-
 pm.sendRequest({
-  url: 'https://cognito-idp.' + region + '.amazonaws.com/',
+  url: pm.variables.get('base_url') + '/login',
   method: 'POST',
-  header: {
-    'Content-Type': 'application/x-amz-json-1.1',
-    'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
-  },
+  header: { 'Content-Type': 'application/json' },
   body: {
     mode: 'raw',
     raw: JSON.stringify({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: clientId,
-      AuthParameters: {
-        USERNAME: username,
-        PASSWORD: password,
-        SECRET_HASH: secretHash,
-      },
+      username: pm.variables.get('api.credentials.username'),
+      password: pm.variables.get('api.credentials.password'),
     }),
   },
 }, function(err, response) {
   if (err) {
-    console.error('Cognito 認証エラー:', err);
+    console.error('ログインエラー:', err);
     return;
   }
-
   var data = response.json();
-
-  if (data.AuthenticationResult) {
-    pm.environment.set('token', data.AuthenticationResult.AccessToken);
-    console.info('Cognito トークン取得成功');
+  if (data.token) {
+    pm.environment.set('token', data.token);
+    console.info('ログイン成功');
   } else {
-    console.warn('Cognito 認証失敗:', JSON.stringify(data));
+    console.warn('ログイン失敗:', JSON.stringify(data));
   }
 });
 ```
@@ -289,26 +269,20 @@ pm.test('発送後のステータスが shipped', function() {
 
 | 変数名 | 値の例 |
 |---|---|
-| `aws_region` | `ap-northeast-1` |
-| `cognito_client_id` | `1a2b3c4d5e...` |
-| `cognito_client_secret` | `（シークレット）` |
-| `api.credentials.username` | `user@example.com` |
-| `api.credentials.password` | `（シークレット）` |
+| `base_url` | `https://your-cloud-run-url` |
+| `api.credentials.username` | `user@example.com`（Cognitoユーザー）または `demo`（ローカル） |
+| `api.credentials.password` | パスワード |
 | `token` | Pre-request Script により自動設定 |
 | `order_id` | Tests により自動設定 |
 
-> **`cognito_client_secret` の確認方法:** AWS コンソール → Cognito → ユーザープール → 「アプリの統合」→ アプリクライアント → 「クライアントのシークレットを表示」
-
 ```
-① Pre-request Script  →  pm.environment.set('token', AccessToken)
+① Pre-request Script  →  POST /login → pm.environment.set('token', ...)
 ② POST /api/orders    →  Authorization: Bearer {{token}}
                           Tests: pm.environment.set('order_id', ...)
 ③ POST /api/orders/{{order_id}}/ship  →  Tests: 400 を確認
 ④ POST /api/orders/{{order_id}}/pay  →  Tests: status = paid を確認
 ⑤ POST /api/orders/{{order_id}}/ship →  Tests: status = shipped を確認
 ```
-
-> **注意:** `AUTH_MODE=local`（デフォルト）の場合、Cognito 設定は不要です。ローカルの `POST /login` エンドポイントで取得したトークンが引き続き使用できます。
 
 ## 開発経緯
 

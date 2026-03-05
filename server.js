@@ -1,12 +1,65 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const https = require('https');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
 const app = express();
 const SECRET_KEY = 'secret_key_demo';
-const AUTH_MODE = process.env.AUTH_MODE || 'local';
+
+// Cognito環境変数が揃っていれば Cognito 認証を使用
+function isCognitoConfigured() {
+  return !!(process.env.COGNITO_USER_POOL_ID && process.env.COGNITO_CLIENT_ID && process.env.AWS_REGION);
+}
+
+// Cognito InitiateAuth を呼び出して資格情報を検証
+function authenticateWithCognito(username, password) {
+  const region = process.env.AWS_REGION;
+  const clientId = process.env.COGNITO_CLIENT_ID;
+  const clientSecret = process.env.COGNITO_CLIENT_SECRET;
+
+  const authParams = { USERNAME: username, PASSWORD: password };
+  if (clientSecret) {
+    authParams.SECRET_HASH = crypto
+      .createHmac('sha256', clientSecret)
+      .update(username + clientId)
+      .digest('base64');
+  }
+
+  const body = JSON.stringify({
+    AuthFlow: 'USER_PASSWORD_AUTH',
+    ClientId: clientId,
+    AuthParameters: authParams,
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: `cognito-idp.${region}.amazonaws.com`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-amz-json-1.1',
+        'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        const parsed = JSON.parse(data);
+        if (parsed.AuthenticationResult) {
+          resolve(parsed.AuthenticationResult);
+        } else {
+          reject(new Error(parsed.message || 'Cognito認証失敗'));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
 
 // メモリ上のデータストア
 let orders = [];
@@ -33,30 +86,35 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-// GET /api/health - ヘルスチェック・認証モード確認
+// GET /api/health - ヘルスチェック
 app.get('/api/health', (req, res) => {
+  const cognito = isCognitoConfigured();
   res.json({
     status: 'ok',
-    authMode: AUTH_MODE,
-    cognito: AUTH_MODE === 'cognito' ? {
+    authBackend: cognito ? 'cognito' : 'local',
+    cognito: cognito ? {
       userPoolId: process.env.COGNITO_USER_POOL_ID ? '設定済み' : '未設定',
       clientId: process.env.COGNITO_CLIENT_ID ? '設定済み' : '未設定',
+      clientSecret: process.env.COGNITO_CLIENT_SECRET ? '設定済み' : '未設定',
       region: process.env.AWS_REGION || '未設定',
     } : null,
   });
 });
 
-// POST /login - ログイン
-app.post('/login', (req, res) => {
+// POST /login - ログイン（Cognito設定済みの場合はCognito認証、未設定の場合はローカル認証）
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  if (AUTH_MODE === 'cognito') {
-    console.warn('[login] AUTH_MODE=cognito のため /login エンドポイントは無効です。Cognito トークンを直接使用してください。');
-    return res.status(403).json({
-      message: '/login エンドポイントは無効です',
-      detail: 'AUTH_MODE=cognito の場合は Cognito で取得したアクセストークンを Authorization ヘッダーに指定してください。',
-      authMode: AUTH_MODE,
-    });
+  if (isCognitoConfigured()) {
+    try {
+      await authenticateWithCognito(username, password);
+      const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: '1h' });
+      console.info(`[login] Cognito認証成功: username="${username}"`);
+      return res.json({ token });
+    } catch (err) {
+      console.warn(`[login] Cognito認証失敗: username="${username}", error="${err.message}"`);
+      return res.status(401).json({ message: '認証に失敗しました' });
+    }
   }
 
   if (username === 'demo' && password === 'password') {
@@ -90,11 +148,7 @@ app.post('/api/seed', (req, res) => {
 });
 
 // 認証が必要なルート
-const activeAuthMiddleware = AUTH_MODE === 'cognito'
-  ? require('./middleware/cognitoAuth')
-  : authMiddleware;
-
-app.use('/api/orders', activeAuthMiddleware);
+app.use('/api/orders', authMiddleware);
 
 // POST /api/orders - 注文作成
 app.post('/api/orders', (req, res) => {
