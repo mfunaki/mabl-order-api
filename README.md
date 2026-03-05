@@ -62,6 +62,14 @@ curl -X POST http://localhost:3000/api/orders \
   -d '{"item": "商品名"}'
 ```
 
+#### GET /api/orders
+全注文一覧を取得します。
+
+```bash
+curl http://localhost:3000/api/orders \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
 #### GET /api/orders/:id
 指定IDの注文情報を取得します。
 
@@ -113,13 +121,7 @@ Amazon Cognitoによる認証に切り替えるには以下の手順で設定し
 
 ### 手順
 
-**1. パッケージのインストール**
-
-```bash
-npm install aws-jwt-verify
-```
-
-**2. 環境変数の設定**
+**1. 環境変数の設定**
 
 `.env.example` をコピーして `.env` を作成し、値を設定します。
 
@@ -149,7 +151,7 @@ AWS マネジメントコンソール → Cognito → ユーザープール → 
 - ユーザープール ID: 概要ページに表示
 - クライアント ID: 「アプリの統合」タブ → 「アプリクライアント」に表示
 
-**3. サーバー起動**
+**2. サーバー起動**
 
 ```bash
 node -r dotenv/config server.js
@@ -157,7 +159,7 @@ node -r dotenv/config server.js
 node server.js
 ```
 
-**4. Cognito トークンの取得と利用**
+**3. Cognito トークンの取得と利用**
 
 Cognito で認証してアクセストークンを取得し、`Authorization: Bearer <token>` ヘッダーに指定します。
 
@@ -176,68 +178,134 @@ curl http://localhost:3000/api/orders \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### mabl APIテストでのトークン取得（JavaScript スニペット）
+### Postman でのトークン取得と検証
 
-mabl の API テストで「JavaScript スニペット」ステップを追加し、以下を記述します：
+#### Pre-request Script（トークン取得）
+
+コレクションまたはリクエストの「Pre-request Script」タブに記述します：
 
 ```javascript
-function mablJavaScriptStep(mablInputs, callback) {
-  var region   = mablInputs.region;
-  var username = mablInputs.username;
-  var password = mablInputs.password;
-  var clientId = mablInputs.clientId;
+var region       = pm.variables.get('aws_region');
+var clientId     = pm.variables.get('cognito_client_id');
+var clientSecret = pm.variables.get('cognito_client_secret');
+var username     = pm.variables.get('api.credentials.username');
+var password     = pm.variables.get('api.credentials.password');
 
-  fetch('https://cognito-idp.' + region + '.amazonaws.com/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-amz-json-1.1',
-      'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
-    },
-    body: JSON.stringify({
+// SECRET_HASH = Base64( HMAC-SHA256( clientSecret, username + clientId ) )
+var secretHash = CryptoJS.enc.Base64.stringify(
+  CryptoJS.HmacSHA256(username + clientId, clientSecret)
+);
+
+pm.sendRequest({
+  url: 'https://cognito-idp.' + region + '.amazonaws.com/',
+  method: 'POST',
+  header: {
+    'Content-Type': 'application/x-amz-json-1.1',
+    'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
+  },
+  body: {
+    mode: 'raw',
+    raw: JSON.stringify({
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: clientId,
       AuthParameters: {
         USERNAME: username,
         PASSWORD: password,
+        SECRET_HASH: secretHash,
       },
     }),
-  })
-  .then(function(response) {
-    if (!response.ok) {
-      return response.text().then(function(text) {
-        throw new Error('Cognito 認証失敗: ' + response.status + ' ' + text);
-      });
-    }
-    return response.json();
-  })
-  .then(function(data) {
-    callback(data.AuthenticationResult.AccessToken);
-  })
-  .catch(function(err) {
-    callback('ERROR: ' + err.message);
-  });
-}
+  },
+}, function(err, response) {
+  if (err) {
+    console.error('Cognito 認証エラー:', err);
+    return;
+  }
+
+  var data = response.json();
+
+  if (data.AuthenticationResult) {
+    pm.environment.set('token', data.AuthenticationResult.AccessToken);
+    console.info('Cognito トークン取得成功');
+  } else {
+    console.warn('Cognito 認証失敗:', JSON.stringify(data));
+  }
+});
 ```
 
-`mablInputs` の引数はステップ設定画面で以下のように指定します：
+取得したトークンは環境変数 `token` に保存されます。各リクエストの Authorization ヘッダーに `Bearer {{token}}` と指定してください。
 
-| 引数名 | 値 |
+#### Tests（レスポンス検証）
+
+「Tests」タブに記述します。各エンドポイントに応じて使い分けます：
+
+**POST /api/orders（注文作成）**
+
+```javascript
+pm.test('ステータスコードが200', function() {
+  pm.expect(pm.response.code).to.equal(200);
+});
+
+pm.test('注文が作成され order_id が返る', function() {
+  var data = pm.response.json();
+  pm.expect(data.order).to.have.property('id');
+  pm.expect(data.order.status).to.equal('created');
+  pm.environment.set('order_id', data.order.id);
+  console.log('作成された注文ID:', data.order.id);
+});
+```
+
+**POST /api/orders/:id/ship（未払いで発送 → 400 確認）**
+
+```javascript
+pm.test('未払い注文の発送で400エラー', function() {
+  pm.expect(pm.response.code).to.equal(400);
+  var data = pm.response.json();
+  pm.expect(data.message).to.include('支払い');
+  console.warn('期待通り400エラー:', data.message);
+});
+```
+
+**POST /api/orders/:id/pay（支払い）**
+
+```javascript
+pm.test('支払い後のステータスが paid', function() {
+  var data = pm.response.json();
+  pm.expect(data.order.status).to.equal('paid');
+  console.info('支払い完了: status =', data.order.status);
+});
+```
+
+**POST /api/orders/:id/ship（発送）**
+
+```javascript
+pm.test('発送後のステータスが shipped', function() {
+  var data = pm.response.json();
+  pm.expect(data.order.status).to.equal('shipped');
+  console.info('発送完了: status =', data.order.status);
+});
+```
+
+#### Postman Environment 変数
+
+| 変数名 | 値の例 |
 |---|---|
-| `region` | `ap-northeast-1` |
-| `clientId` | `{{cognito_client_id}}` |
-| `username` | `{{cognito_username}}` |
-| `password` | `{{cognito_password}}` |
+| `aws_region` | `ap-northeast-1` |
+| `cognito_client_id` | `1a2b3c4d5e...` |
+| `cognito_client_secret` | `（シークレット）` |
+| `api.credentials.username` | `user@example.com` |
+| `api.credentials.password` | `（シークレット）` |
+| `token` | Pre-request Script により自動設定 |
+| `order_id` | Tests により自動設定 |
 
-`cognito_client_id`、`cognito_username`、`cognito_password` は mabl の **Environment** に事前登録しておきます。
-
-`callback()` に渡した AccessToken がこのステップの出力になります。後続のステップで `Authorization: Bearer {{js_step_output}}` のように参照してください。
+> **`cognito_client_secret` の確認方法:** AWS コンソール → Cognito → ユーザープール → 「アプリの統合」→ アプリクライアント → 「クライアントのシークレットを表示」
 
 ```
-① JavaScript スニペット  →  callback(AccessToken)  ← Cognito から取得
-② POST /api/orders       →  Authorization: Bearer {{js_step_output}}
-③ GET  /api/orders/{{order_id}}
-④ POST /api/orders/{{order_id}}/pay
-⑤ POST /api/orders/{{order_id}}/ship
+① Pre-request Script  →  pm.environment.set('token', AccessToken)
+② POST /api/orders    →  Authorization: Bearer {{token}}
+                          Tests: pm.environment.set('order_id', ...)
+③ POST /api/orders/{{order_id}}/ship  →  Tests: 400 を確認
+④ POST /api/orders/{{order_id}}/pay  →  Tests: status = paid を確認
+⑤ POST /api/orders/{{order_id}}/ship →  Tests: status = shipped を確認
 ```
 
 > **注意:** `AUTH_MODE=local`（デフォルト）の場合、Cognito 設定は不要です。ローカルの `POST /login` エンドポイントで取得したトークンが引き続き使用できます。
