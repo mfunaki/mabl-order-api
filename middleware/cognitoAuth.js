@@ -47,10 +47,14 @@ const cognitoAuth = (req, res, next) => {
     return res.status(500).json({ message: 'サーバー設定エラー: Cognito 環境変数が不足しています' });
   }
 
-  jwt.verify(token, getKey, { algorithms: ['RS256'], audience: clientId }, (err, payload) => {
+  jwt.verify(token, getKey, { algorithms: ['RS256'] }, (err, payload) => {
     if (err) {
       console.error(`[cognitoAuth] トークン検証失敗: ${err.name} - ${err.message}`);
       return res.status(401).json({ message: '無効なトークンです', detail: err.message });
+    }
+    if (payload.client_id !== clientId) {
+      console.error(`[cognitoAuth] client_id 不一致: expected=${clientId}, actual=${payload.client_id}`);
+      return res.status(401).json({ message: '無効なトークンです', detail: 'client_id mismatch' });
     }
     req.user = { username: payload['cognito:username'] || payload.sub };
     next();
