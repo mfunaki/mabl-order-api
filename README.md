@@ -181,10 +181,13 @@ curl http://localhost:3000/api/orders \
 mabl の API テストで「JavaScript スニペット」ステップを追加し、以下を記述します：
 
 ```javascript
-// Cognito にリクエストしてアクセストークンを取得する
-const response = await fetch(
-  `https://cognito-idp.${mabl.getVariable('aws_region')}.amazonaws.com/`,
-  {
+function mablJavaScriptStep(mablInputs, callback) {
+  var region   = mablInputs.region;
+  var username = mablInputs.username;
+  var password = mablInputs.password;
+  var clientId = mablInputs.clientId;
+
+  fetch('https://cognito-idp.' + region + '.amazonaws.com/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-amz-json-1.1',
@@ -192,37 +195,46 @@ const response = await fetch(
     },
     body: JSON.stringify({
       AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: mabl.getVariable('cognito_client_id'),
+      ClientId: clientId,
       AuthParameters: {
-        USERNAME: mabl.getVariable('cognito_username'),
-        PASSWORD: mabl.getVariable('cognito_password'),
+        USERNAME: username,
+        PASSWORD: password,
       },
     }),
-  }
-);
-
-if (!response.ok) {
-  throw new Error(`Cognito 認証失敗: ${response.status} ${await response.text()}`);
+  })
+  .then(function(response) {
+    if (!response.ok) {
+      return response.text().then(function(text) {
+        throw new Error('Cognito 認証失敗: ' + response.status + ' ' + text);
+      });
+    }
+    return response.json();
+  })
+  .then(function(data) {
+    callback(data.AuthenticationResult.AccessToken);
+  })
+  .catch(function(err) {
+    callback('ERROR: ' + err.message);
+  });
 }
-
-const data = await response.json();
-mabl.setVariable('token', data.AuthenticationResult.AccessToken);
 ```
 
-スニペット内で `mabl.getVariable()` を使う値は、mabl の **Environment** に事前登録しておきます：
+`mablInputs` の引数はステップ設定画面で以下のように指定します：
 
-| 変数名 | 値の例 |
+| 引数名 | 値 |
 |---|---|
-| `aws_region` | `ap-northeast-1` |
-| `cognito_client_id` | `1a2b3c4d5e...` |
-| `cognito_username` | `user@example.com` |
-| `cognito_password` | `（シークレット）` |
+| `region` | `ap-northeast-1` |
+| `clientId` | `{{cognito_client_id}}` |
+| `username` | `{{cognito_username}}` |
+| `password` | `{{cognito_password}}` |
 
-取得した `token` は後続のステップで `{{token}}` として参照できます。
+`cognito_client_id`、`cognito_username`、`cognito_password` は mabl の **Environment** に事前登録しておきます。
+
+`callback()` に渡した AccessToken がこのステップの出力になります。後続のステップで `Authorization: Bearer {{js_step_output}}` のように参照してください。
 
 ```
-① JavaScript スニペット  →  mabl.setVariable('token', AccessToken)
-② POST /api/orders       →  Authorization: Bearer {{token}}
+① JavaScript スニペット  →  callback(AccessToken)  ← Cognito から取得
+② POST /api/orders       →  Authorization: Bearer {{js_step_output}}
 ③ GET  /api/orders/{{order_id}}
 ④ POST /api/orders/{{order_id}}/pay
 ⑤ POST /api/orders/{{order_id}}/ship

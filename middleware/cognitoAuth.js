@@ -33,14 +33,23 @@ function getKey(header, callback) {
 const cognitoAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.warn('[cognitoAuth] Authorization ヘッダーがありません');
     return res.status(401).json({ message: '認証が必要です' });
   }
 
   const token = authHeader.split(' ')[1];
   const clientId = process.env.COGNITO_CLIENT_ID;
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  const region = process.env.AWS_REGION;
+
+  if (!clientId || !userPoolId || !region) {
+    console.error(`[cognitoAuth] 環境変数不足: COGNITO_CLIENT_ID=${clientId ? '設定済み' : '未設定'}, COGNITO_USER_POOL_ID=${userPoolId ? '設定済み' : '未設定'}, AWS_REGION=${region || '未設定'}`);
+    return res.status(500).json({ message: 'サーバー設定エラー: Cognito 環境変数が不足しています' });
+  }
 
   jwt.verify(token, getKey, { algorithms: ['RS256'], audience: clientId }, (err, payload) => {
     if (err) {
+      console.error(`[cognitoAuth] トークン検証失敗: ${err.name} - ${err.message}`);
       return res.status(401).json({ message: '無効なトークンです', detail: err.message });
     }
     req.user = { username: payload['cognito:username'] || payload.sub };

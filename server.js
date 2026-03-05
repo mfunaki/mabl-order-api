@@ -33,15 +33,38 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+// GET /api/health - ヘルスチェック・認証モード確認
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    authMode: AUTH_MODE,
+    cognito: AUTH_MODE === 'cognito' ? {
+      userPoolId: process.env.COGNITO_USER_POOL_ID ? '設定済み' : '未設定',
+      clientId: process.env.COGNITO_CLIENT_ID ? '設定済み' : '未設定',
+      region: process.env.AWS_REGION || '未設定',
+    } : null,
+  });
+});
+
 // POST /login - ログイン
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
+
+  if (AUTH_MODE === 'cognito') {
+    console.warn('[login] AUTH_MODE=cognito のため /login エンドポイントは無効です。Cognito トークンを直接使用してください。');
+    return res.status(403).json({
+      message: '/login エンドポイントは無効です',
+      detail: 'AUTH_MODE=cognito の場合は Cognito で取得したアクセストークンを Authorization ヘッダーに指定してください。',
+      authMode: AUTH_MODE,
+    });
+  }
 
   if (username === 'demo' && password === 'password') {
     const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: '1h' });
     return res.json({ token });
   }
 
+  console.warn(`[login] 認証失敗: username="${username}"`);
   return res.status(401).json({ message: '認証に失敗しました' });
 });
 
