@@ -14,6 +14,27 @@ function isCognitoConfigured() {
   return !!(process.env.COGNITO_USER_POOL_ID && process.env.COGNITO_CLIENT_ID && process.env.AWS_REGION);
 }
 
+// Cognito JWKS クライアント（Cognito設定時のみ遅延ロード）
+let jwksClientInstance = null;
+function getJwksClient() {
+  if (!jwksClientInstance) {
+    const jwksRsa = require('jwks-rsa');
+    jwksClientInstance = jwksRsa({
+      jwksUri: `https://cognito-idp.${process.env.AWS_REGION}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}/.well-known/jwks.json`,
+      cache: true,
+      rateLimit: true,
+    });
+  }
+  return jwksClientInstance;
+}
+
+function getSigningKey(header, callback) {
+  getJwksClient().getSigningKey(header.kid, (err, key) => {
+    if (err) return callback(err);
+    callback(null, key.getPublicKey());
+  });
+}
+
 // Cognito InitiateAuth を呼び出して資格情報を検証
 function authenticateWithCognito(username, password) {
   const region = process.env.AWS_REGION;
@@ -77,12 +98,28 @@ const authMiddleware = (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: '無効なトークンです' });
+
+  if (isCognitoConfigured()) {
+    jwt.verify(token, getSigningKey, { algorithms: ['RS256'] }, (err, payload) => {
+      if (err) {
+        console.error(`[authMiddleware] Cognitoトークン検証失敗: ${err.message}`);
+        return res.status(401).json({ message: '無効なトークンです' });
+      }
+      if (payload.client_id !== process.env.COGNITO_CLIENT_ID) {
+        console.error(`[authMiddleware] client_id 不一致`);
+        return res.status(401).json({ message: '無効なトークンです' });
+      }
+      req.user = { username: payload['cognito:username'] || payload.sub };
+      next();
+    });
+  } else {
+    try {
+      const decoded = jwt.verify(token, SECRET_KEY);
+      req.user = decoded;
+      next();
+    } catch (err) {
+      return res.status(401).json({ message: '無効なトークンです' });
+    }
   }
 };
 
@@ -107,10 +144,9 @@ app.post('/login', async (req, res) => {
 
   if (isCognitoConfigured()) {
     try {
-      await authenticateWithCognito(username, password);
-      const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: '1h' });
+      const result = await authenticateWithCognito(username, password);
       console.info(`[login] Cognito認証成功: username="${username}"`);
-      return res.json({ token });
+      return res.json({ token: result.AccessToken });
     } catch (err) {
       console.warn(`[login] Cognito認証失敗: username="${username}", error="${err.message}"`);
       return res.status(401).json({ message: '認証に失敗しました' });
