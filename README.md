@@ -181,33 +181,54 @@ Cognito 環境変数が未設定の場合は、ローカル認証（`demo` / `pa
 
 ### Postman でのトークン取得と検証
 
-#### Pre-request Script（ログイン）
+#### Pre-request Script（Cognitoトークン取得）
 
 コレクションまたはリクエストの「Pre-request Script」タブに記述します：
 
 ```javascript
+var region       = pm.variables.get('aws_region');
+var clientId     = pm.variables.get('cognito_client_id');
+var clientSecret = pm.variables.get('cognito_client_secret');
+var username     = pm.variables.get('api.credentials.username');
+var password     = pm.variables.get('api.credentials.password');
+
+// SECRET_HASH = Base64( HMAC-SHA256( clientSecret, username + clientId ) )
+var secretHash = CryptoJS.enc.Base64.stringify(
+  CryptoJS.HmacSHA256(username + clientId, clientSecret)
+);
+
 pm.sendRequest({
-  url: pm.variables.get('base_url') + '/login',
+  url: 'https://cognito-idp.' + region + '.amazonaws.com/',
   method: 'POST',
-  header: { 'Content-Type': 'application/json' },
+  header: {
+    'Content-Type': 'application/x-amz-json-1.1',
+    'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
+  },
   body: {
     mode: 'raw',
     raw: JSON.stringify({
-      username: pm.variables.get('api.credentials.username'),
-      password: pm.variables.get('api.credentials.password'),
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: clientId,
+      AuthParameters: {
+        USERNAME: username,
+        PASSWORD: password,
+        SECRET_HASH: secretHash,
+      },
     }),
   },
 }, function(err, response) {
   if (err) {
-    console.error('ログインエラー:', err);
+    console.error('Cognito 認証エラー:', err);
     return;
   }
+
   var data = response.json();
-  if (data.token) {
-    pm.environment.set('token', data.token);
-    console.info('ログイン成功');
+
+  if (data.AuthenticationResult) {
+    pm.environment.set('token', data.AuthenticationResult.AccessToken);
+    console.info('Cognito トークン取得成功');
   } else {
-    console.warn('ログイン失敗:', JSON.stringify(data));
+    console.warn('Cognito 認証失敗:', JSON.stringify(data));
   }
 });
 ```
@@ -269,14 +290,18 @@ pm.test('発送後のステータスが shipped', function() {
 
 | 変数名 | 値の例 |
 |---|---|
-| `base_url` | `https://your-cloud-run-url` |
-| `api.credentials.username` | `user@example.com`（Cognitoユーザー）または `demo`（ローカル） |
-| `api.credentials.password` | パスワード |
+| `aws_region` | `ap-northeast-1` |
+| `cognito_client_id` | `1a2b3c4d5e...` |
+| `cognito_client_secret` | `（シークレット）` |
+| `api.credentials.username` | `user@example.com` |
+| `api.credentials.password` | `（シークレット）` |
 | `token` | Pre-request Script により自動設定 |
 | `order_id` | Tests により自動設定 |
 
+> **`cognito_client_secret` の確認方法:** AWS コンソール → Cognito → ユーザープール → 「アプリの統合」→ アプリクライアント → 「クライアントのシークレットを表示」
+
 ```
-① Pre-request Script  →  POST /login → pm.environment.set('token', ...)
+① Pre-request Script  →  pm.environment.set('token', AccessToken)
 ② POST /api/orders    →  Authorization: Bearer {{token}}
                           Tests: pm.environment.set('order_id', ...)
 ③ POST /api/orders/{{order_id}}/ship  →  Tests: 400 を確認
