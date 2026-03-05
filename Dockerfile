@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm install --production
 
 COPY server.js ./
+COPY middleware/ ./middleware/
 COPY docs/ ./docs/
 COPY openapi.yaml ./
 COPY openapi_en.yaml ./
