@@ -47,3 +47,66 @@ created --> paid --> shipped
 
 ## CI/CD
 mainブランチへのpushでCloud Runへ自動デプロイ（.github/workflows/deploy.yml）。デプロイ後にmablテストが自動実行される。
+
+## Docker操作
+
+```bash
+# ローカルでDockerイメージをビルド
+docker build -t mabl-order-api .
+
+# コンテナ起動
+docker run -p 3000:3000 mabl-order-api
+
+# バックグラウンドで起動
+docker run -d -p 3000:3000 --name mabl-api mabl-order-api
+
+# コンテナ停止・削除
+docker stop mabl-api && docker rm mabl-api
+```
+
+## API動作確認（curl）
+
+```bash
+# ログインしてトークン取得
+TOKEN=$(curl -s -X POST http://localhost:3000/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"demo","password":"password"}' | jq -r '.token')
+
+# 注文作成
+curl -X POST http://localhost:3000/api/orders \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"item":"テスト商品"}'
+
+# 注文取得
+curl http://localhost:3000/api/orders/1 \
+  -H "Authorization: Bearer $TOKEN"
+
+# 支払い処理
+curl -X POST http://localhost:3000/api/orders/1/pay \
+  -H "Authorization: Bearer $TOKEN"
+
+# 発送処理
+curl -X POST http://localhost:3000/api/orders/1/ship \
+  -H "Authorization: Bearer $TOKEN"
+
+# データリセット
+curl -X POST http://localhost:3000/api/reset
+
+# 完全フロー（注文→支払い→発送）
+curl -X POST http://localhost:3000/api/reset && \
+TOKEN=$(curl -s -X POST http://localhost:3000/login -H "Content-Type: application/json" -d '{"username":"demo","password":"password"}' | jq -r '.token') && \
+ORDER=$(curl -s -X POST http://localhost:3000/api/orders -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"item":"テスト商品"}') && \
+ORDER_ID=$(echo $ORDER | jq -r '.order.id') && \
+curl -X POST "http://localhost:3000/api/orders/$ORDER_ID/pay" -H "Authorization: Bearer $TOKEN" && \
+curl -X POST "http://localhost:3000/api/orders/$ORDER_ID/ship" -H "Authorization: Bearer $TOKEN"
+```
+
+## MCP Integration
+
+| MCPサーバー | 用途 |
+|------------|------|
+| **GitHub** | PR作成、Issue管理、CI/CDステータス確認 |
+| **mabl** | E2Eテスト作成・実行・結果確認 |
+| **Docker** | コンテナビルド・実行の自動化 |
+| **GCP (gcloud)** | Cloud Runデプロイ状況確認 |
